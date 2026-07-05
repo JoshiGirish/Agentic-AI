@@ -2,6 +2,8 @@
 
 This project implements a multi-stage research agent built using LangGraph. The agent automates the process of answering complex questions by systematically expanding the query, gathering information from the web via multiple search queries, and synthesizing the gathered data into a final, coherent summary.
 
+![Research Agent Diagram](Research_agent.png)
+
 ## 🚀 Overview
 
 The `research_agent.py` script orchestrates a research workflow that mimics a junior researcher's process:
