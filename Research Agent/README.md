@@ -1,75 +1,156 @@
-# Research Agent: Automated Web Research and Synthesis Agent
+# Research Agent 🧠
 
 This project implements a multi-stage research agent built using LangGraph. The agent automates the process of answering complex questions by systematically expanding the query, gathering information from the web via multiple search queries, and synthesizing the gathered data into a final, coherent summary.
 
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Quick Start](#-quick-start)
+- [Docker Deployment](#-docker-deployment)
+- [Configuration](#-configuration)
+
+---
+
+## 🚀 Features
+
+- **Multi-Query Research**: Automatically generates multiple semantically diverse search queries to explore different angles of a topic
+- **Web Scraping**: Extracts content from multiple sources using SearXNG as a privacy-focused search engine
+- **Intelligent Summarization**: Combines findings from multiple sources into a coherent, well-structured summary
+- **Rich Console Output**: Beautiful terminal output with colored panels and progress indicators
+- **Docker-Ready**: Fully containerized deployment with all dependencies included
+- **Privacy-First**: Uses SearXNG for anonymous, uncensored search results
+
+---
+
+## 🏗️ Architecture
+
 ![Research Agent Diagram](Research_agent.png)
 
-## 🚀 Overview
+### Components
 
-The `research_agent.py` script orchestrates a research workflow that mimics a junior researcher's process:
-1.  **Query Expansion:** Takes a single user question and generates several semantically diverse search queries.
-2.  **Web Research:** Executes web searches using SearXNG and scrapes the main content from the top results for each query.
-3.  **Synthesis:** Passes all scraped content to a Large Language Model (LLM) to generate a final, structured summary answering the original question.
+| Component | Purpose |
+|-----------|---------|
+| **research_agent.py** | Main application logic with LangGraph workflow |
+| **Dockerfile** | Container image definition |
+| **docker-compose.yml** | Multi-service orchestration |
+| **searxng/** | Privacy-focused search engine container |
 
-## 🛠️ Prerequisites & Setup
+---
 
-Before running the agent, ensure the following dependencies and services are running:
+## 📦 Quick Start
 
-### 1. Python Dependencies
-Install the required Python libraries:
-```bash
-pip install langchain-openai pydantic trafilatura requests rich langgraph
-```
+### Prerequisites
 
-### 2. External Services
-The agent relies on two external services:
-*   **LLM Endpoint:** An accessible LLM endpoint (e.g., a local Ollama or OpenAI proxy) configured at `http://localhost:8080/v1`.
-*   **Search Engine:** A running SearXNG instance accessible at `http://localhost:8080/search`.
+- Docker and Docker Compose
+- Python 3.11+ (for local development)
 
-### 3. Environment Variables & Configuration
-The script uses hardcoded defaults, but for production use, consider setting environment variables for:
-*   **LLM API Key:** The `api_key` for the LLM provider (currently mocked as `"dummy-key"`).
-*   **LLM Base URL:** The base URL for the LLM API (`DEFAULT_BASE_URL`).
-
-## ⚙️ Architecture Deep Dive (LangGraph Workflow)
-
-The agent's logic is encapsulated within a `StateGraph` graph, defining a clear, sequential workflow:
-
-**State:** `ResearchAgentState`
-This class manages the entire state of the research process, holding the original `question`, the list of generated `queries`, the `scrapedData` from the web, and the final `summary`.
-
-**Nodes (Stages):**
-
-1.  **`expand_query` (Query Expansion):**
-    *   **Input:** `ResearchAgentState` containing the user's question.
-    *   **Process:** Calls an LLM to generate a list of at least three independent, semantically rich search queries. It also incorporates the current date into the system prompt to ensure temporal relevance.
-    *   **Output:** Updates the state with the list of `queries`.
-
-2.  **`research_topic` (Web Research):**
-    *   **Input:** `ResearchAgentState` containing the list of `queries`.
-    *   **Process:** Iterates through each query. For each query, it calls the `search_web` function, which:
-        *   Queries SearXNG for search results.
-        *   Fetches the content of the top links using `trafilatura`.
-        *   Aggregates all extracted text into a list of scraped data.
-    *   **Output:** Updates the state with `scrapedData` (a list of strings, one for each query).
-
-3.  **`summarize` (Summary Generation):**
-    *   **Input:** `ResearchAgentState` containing the `scrapedData`.
-    *   **Process:** Constructs a detailed prompt containing the original question and all scraped articles. It invokes the LLM one final time to synthesize a comprehensive summary.
-    *   **Output:** Updates the state with the final `summary` string.
-
-**Graph Flow:**
-`START` → `expand` → `research` → `summarize` → `END`
-
-## ▶️ How to Run
-
-### Command-Line Arguments
-
-The agent accepts command-line arguments to specify the research topic:
+### Run with Docker (Recommended)
 
 ```bash
-# Use a custom research topic
-python research_agent.py --topic "Your research question here"
+# Start all services
+docker-compose up -d
+
+# Access SearXNG search interface
+# Open http://localhost:8888 in your browser
+
+# Run the research agent
+docker-compose exec research-agent python research_agent.py --topic "Your research topic here"
 ```
 
-The agent will print its progress to the console, showing the execution of each stage (Query Expansion, Web Research, Summary Generation). The final summary will be displayed using Markdown formatting.
+### Expected Output
+
+```
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                         │
+│  ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │
+│  │  🚀 RESEARCH AGENT INITIALIZED                                                                                   │
+│  │                                                                                                                 │
+│  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│  ════════════════════════════════════════════════════════════════════════════════════════════════════════════ │
+│                                                                                                         │
+│  Model:   Qwen3.5-9B.Q4_K_M.gguf
+│  Base URL: http://localhost:8080/v1
+│  Timestamp: 2026-07-07 00:15:30
+│                                                                                                         │
+│                                                                                                         │
+│  📝 Research Topic: Latest developments in quantum computing
+│  
+│  Starting research process...
+│  
+│  ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  │                                                                                                         │
+│  │  📌 STAGE: Query Expansion                                                                                      │
+│  │                                                                                                                 │
+│  │  Original topic: Latest developments in quantum computing
+│  │  Current date: July 07, 2026
+│  │                                                                                                                 │
+│  │  🔍 Generated search queries:
+│  │     [1] breakthrough quantum computing advances 2025 2026
+│  │     [2] quantum computing applications in medicine
+│  │     [3] quantum computing vs classical computing comparison
+│  │                                                                                                                 │
+│  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                         │
+│  ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  │                                                                                                         │
+│  │  🔬 STAGE: Web Research                                                                                         │
+│  │                                                                                                                 │
+│  │  Query 1/3: breakthrough quantum computing advances 2025 2026
+│  │  📄 Fetching: https://example.com/quantum-breakthroughs
+│  │  📄 Fetching: https://example.com/quantum-latest
+│  │                                                                                                                 │
+│  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                         │
+│  ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  │                                                                                                         │
+│  │  📝 STAGE: Summary Generation                                                                                   │
+│  │                                                                                                                 │
+│  │  Topic: Latest developments in quantum computing
+│  │                                                                                                                 │
+│  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                         │
+│  ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  │                                                                                                         │
+│  │  ✅ RESEARCH COMPLETE                                                                                           │
+│  │                                                                                                                 │
+│  │  Final Summary:
+│  │  
+│  │  ## Quantum Computing: Latest Developments (July 2026)
+│  │  
+│  │  ### Major Breakthroughs
+│  │  - [Detailed quantum computing summary would appear here]
+│  │  - [Key research findings]
+│  │  - [Industry applications]
+│  │  
+│  │  ### Key Applications
+│  │  - Drug discovery and molecular simulation
+│  │  - Cryptography and cybersecurity
+│  │  - Financial modeling and optimization
+│  │  
+│  │  ### Future Outlook
+│  │  - Expected timeline for commercial quantum computers
+│  │  - Emerging research directions
+│  │  
+│  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                         │
+```
+
+---
+
+### Service Architecture
+
+| Service | Image | Port | Purpose |
+|---------|-------|------|---------|
+| research-agent | Built from Dockerfile | N/A | Main research application |
+| searxng | searxng/searxng:latest | 8888:8080 | Privacy-focused search engine |
+| redis | valkey/valkey:8-alpine | N/A | Session/cache storage |
+
+### Environment Variables
+
+```yaml
+# research-agent service
+SEARXNG_URL=http://searxng:8080/search
+DEFAULT_LLM_URL=http://localhost:8080/v1
+
+```
