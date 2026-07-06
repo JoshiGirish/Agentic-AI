@@ -1,0 +1,19 @@
+# Read the documentation before extending the defaults:
+# https://docs.searxng.org/admin/settings/
+
+use_default_settings: true
+
+server:
+  secret_key: "2ZXnfQEsxEvTsJbRMpk5446Yu4jWxy"
+  image_proxy: true
+
+search:
+  formats:
+    - html
+    - json
+
+engines:
+  - name: arch linux wiki
+    tokens: ['$ecretValue']
+  - name: bing
+    disabled: false

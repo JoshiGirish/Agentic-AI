@@ -24,7 +24,7 @@ pip install langchain-openai pydantic trafilatura requests rich langgraph
 ### 2. External Services
 The agent relies on two external services:
 *   **LLM Endpoint:** An accessible LLM endpoint (e.g., a local Ollama or OpenAI proxy) configured at `http://localhost:8080/v1`.
-*   **Search Engine:** A running SearXNG instance accessible at `http://localhost:8888/search`.
+*   **Search Engine:** A running SearXNG instance accessible at `http://localhost:8080/search`.
 
 ### 3. Environment Variables & Configuration
 The script uses hardcoded defaults, but for production use, consider setting environment variables for:
@@ -59,15 +59,17 @@ This class manages the entire state of the research process, holding the origina
     *   **Output:** Updates the state with the final `summary` string.
 
 **Graph Flow:**
-`START` $\rightarrow$ `expand` $\rightarrow$ `research` $\rightarrow$ `summarize` $\rightarrow$ `END`
+`START` → `expand` → `research` → `summarize` → `END`
 
 ## ▶️ How to Run
 
-1.  Ensure all prerequisites are installed and external services are running.
-2.  Execute the main function:
+### Command-Line Arguments
+
+The agent accepts command-line arguments to specify the research topic:
 
 ```bash
-python research_agent.py
+# Use a custom research topic
+python research_agent.py --topic "Your research question here"
 ```
 
 The agent will print its progress to the console, showing the execution of each stage (Query Expansion, Web Research, Summary Generation). The final summary will be displayed using Markdown formatting.

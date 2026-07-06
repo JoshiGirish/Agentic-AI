@@ -1,4 +1,3 @@
-from time import sleep
 from pydantic import BaseModel, Field, SecretStr
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
@@ -10,11 +9,12 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.markdown import Markdown
+import argparse
 
 # Configuration
-SEARXNG_URL = "http://localhost:8888/search"
+SEARXNG_URL = "http://searxng:8080/search"
 DEFAULT_MODEL = "Qwen3.5-9B.Q4_K_M.gguf"
-DEFAULT_BASE_URL = "http://localhost:8080/v1"
+DEFAULT_LLM_URL = "http://localhost:8080/v1"
 nQueriesToGenerate = 3
 nLinksToSearchPerQuery = 3
 
@@ -22,12 +22,12 @@ nLinksToSearchPerQuery = 3
 console = Console()
 
 class ResearchAgentState(BaseModel):
-    question: str = Field(
-        description="Question from the user"
+    topic: str = Field(
+        description="Topic from the user"
     )
     queries: list = Field(
         default_factory=list,
-        description="list of semantically similar search queries for the question"
+        description="list of semantically similar search queries for the topic"
     )
     scrapedData: list[str] = Field(
         default_factory=list,
@@ -48,7 +48,7 @@ def get_llm() -> ChatOpenAI:
     """Get the LLM instance with proper error handling."""
     return ChatOpenAI(
         model=DEFAULT_MODEL,
-        base_url=DEFAULT_BASE_URL,
+        base_url=DEFAULT_LLM_URL,
         reasoning_effort="low",
         api_key=SecretStr("dummy-key"),
         temperature=0.2
@@ -59,10 +59,10 @@ def get_llm_with_output() -> ChatOpenAI:
     return get_llm().with_structured_output(QueryList)
 
 def expand_query(state: ResearchAgentState) -> dict:
-    """Expand the user question into multiple search queries."""
+    """Expand the user topic into multiple search queries."""
     console.print(Panel.fit("[bold blue]📌 STAGE: Query Expansion[/bold blue]", style="blue"))
     console.print(Rule(style="blue"))
-    console.print(f"\n[bold]Original question:[/bold] {state.question}")
+    console.print(f"\n[bold]Original topic:[/bold] {state.topic}")
     
     # Get current date for context
     current_date = datetime.now().strftime("%B %d, %Y")
@@ -74,13 +74,13 @@ def expand_query(state: ResearchAgentState) -> dict:
     sys_msg = SystemMessage(content=f"""
         Current date: {current_date}
         
-        Generate at least three semantic search queries for the user's question.
+        Generate at least three semantic search queries for the user's topic.
         Each query should be independent and explore different angles.
         IMPORTANT: Use the current date for any time references.
         Return only the structured output.
     """)
     
-    messages = [sys_msg, HumanMessage(content=state.question)]
+    messages = [sys_msg, HumanMessage(content=state.topic)]
     result = llm.invoke(messages)
     
     console.print("\n[bold cyan]🔍 Generated search queries:[/bold cyan]")
@@ -109,7 +109,7 @@ def search_web(query: str) -> str:
             console.print(f"[yellow]⚠️  No results found for query: {query}[/yellow]")
             return ""
         text = ""
-        for result in results[:nLinksToSearch]:
+        for result in results[:nLinksToSearchPerQuery]:
             url = result["url"]
             console.print(f"[dim]📄 Fetching:[/dim] {url}")
             
@@ -148,17 +148,17 @@ def summarize(state: ResearchAgentState) -> dict:
     """Summarize the research findings."""
     console.print(Panel.fit("[bold yellow]📝 STAGE: Summary Generation[/bold yellow]", style="yellow"))
     console.print(Rule(style="yellow"))
-    console.print(f"\n[bold]Question:[/bold] {state.question}")
+    console.print(f"\n[bold]Topic:[/bold] {state.topic}")
     console.print(f"[dim]Articles processed:[/dim] {len(state.scrapedData)}")
     
     context = [
         SystemMessage(content=f"""You are an expert at summarizing research from different individual articles.
-        Ignore any articles that are not relevant to the question.
+        Ignore any articles that are not relevant to the topic.
         Propose the summary in clean markdown code.
         
-        Question: {state.question}
+        Topic: {state.topic}
         
-        Summarize the following articles to answer the aforementioned question: """)
+        Summarize the following articles to answer the aforementioned topic: """)
     ]
     
     for i, text in enumerate(state.scrapedData, 1):
@@ -176,16 +176,44 @@ def summarize(state: ResearchAgentState) -> dict:
 
 def main():
     """Main entry point for the research agent."""
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Research Agent - Conduct web research on any topic"
+    )
+    parser.add_argument(
+        "--topic",
+        type=str,
+        help="The research topic to investigate"
+    )
+    
+    args = parser.parse_args()
+    
+    # Determine the research topic from arguments or use default
+    if args.topic:
+        topic = args.topic
+    else:
+        console.print(Panel.fit(
+            "[bold red]❌ ERROR: No research topic provided![/bold red]",
+            style="red"
+        ))
+        console.print(Rule(style="red"))
+        console.print("\n[bold]Usage:[/bold] python research_agent.py --topic \"your research topic\"")
+        console.print("\n[bold]Examples:[/bold]")
+        console.print("  python research_agent.py --topic \"Latest AI developments\"")
+        console.print("  python research_agent.py -q \"Climate change solutions\"")
+        console.print("  python research_agent.py --topic \"Quantum computing\" -v")
+        console.print("\n[bold]Or use a default topic:[/bold]")
+        console.print("  python research_agent.py --topic \"\"  # Will use default topic")
+        return
+    
     console.print(Panel.fit("[bold white]🚀 RESEARCH AGENT INITIALIZED[/bold white]", style="white"))
     console.print(Rule(style="white"))
     console.print(f"[dim]Model:[/dim] {DEFAULT_MODEL}")
-    console.print(f"[dim]Base URL:[/dim] {DEFAULT_BASE_URL}")
+    console.print(f"[dim]Base URL:[/dim] {DEFAULT_LLM_URL}")
     console.print(f"[dim]Timestamp:[/dim] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     console.print(Rule(style="white"))
     
-    question = "Last week news on new tools/processes/operations/architectures for Generative AI developers"
-    
-    console.print(f"\n[bold]📝 Research Question:[/bold] {question}")
+    console.print(f"\n[bold]📝 Research Topic:[/bold] {topic}")
     console.print("\n[bold]Starting research process...[/bold]\n")
     
     # Build the graph
@@ -203,7 +231,7 @@ def main():
     # Run the research
     response = graph.invoke(
         {
-            "question": question,
+            "topic": topic,
             "queries": [],
             "scrapedData": [],
             "summary": ""
