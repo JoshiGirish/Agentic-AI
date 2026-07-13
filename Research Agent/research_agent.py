@@ -144,10 +144,8 @@ def search_web(query: str, state: ResearchAgentState) -> str:
                     state.nTotalArticlesProcessed += 1
                     if articleCount == nLinksToSearchPerQuery:
                         return text
-                
-                if not text:
-                    console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")
-                    return ""
+            else:
+                console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")
         
         return text
     except requests.exceptions.RequestException as e:
