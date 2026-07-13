@@ -16,6 +16,7 @@ This project implements a multi-stage research agent built using LangGraph. The 
 
 - **Multi-Query Research**: Automatically generates multiple semantically diverse search queries to explore different angles of a topic
 - **Web Scraping**: Extracts content from multiple sources using SearXNG as a privacy-focused search engine
+- **Relevance Filtering**: Uses embedding-based relevance checking to filter scraped articles by comparing query embeddings with article content embeddings and applying a cosine similarity threshold (default: 0.60)
 - **Intelligent Summarization**: Combines findings from multiple sources into a coherent, well-structured summary
 - **Rich Console Output**: Beautiful terminal output with colored panels and progress indicators
 - **Docker-Ready**: Fully containerized deployment with all dependencies included
@@ -152,5 +153,5 @@ docker-compose exec research-agent python research_agent.py --topic "Your resear
 # research-agent service
 SEARXNG_URL=http://searxng:8080/search
 DEFAULT_LLM_URL=http://localhost:8080/v1
-
+DEFAULT_EMBED_URL=http://localhost:8081/v1/embeddings  # Embedding service for relevance filtering
 ```
