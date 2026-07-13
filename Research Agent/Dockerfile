@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the research agent code
-COPY research_agent.py .
+COPY ./research_agent ./research_agent
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
