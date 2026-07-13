@@ -1,22 +1,27 @@
+import json
+import argparse
+import requests
+import trafilatura
+import numpy as np
 from pydantic import BaseModel, Field, SecretStr
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from langchain_core.messages import HumanMessage, SystemMessage
-import trafilatura
-import requests
+from typing import List, Optional, Tuple
 from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.markdown import Markdown
-import argparse
 
 # Configuration
 SEARXNG_URL = "http://searxng:8080/search"
 DEFAULT_MODEL = "Qwen3.5-9B.Q4_K_M.gguf"
 DEFAULT_LLM_URL = "http://localhost:8080/v1"
+DEFAULT_EMBED_URL = "http://localhost:8081/v1/embeddings"
 nQueriesToGenerate = 3
 nLinksToSearchPerQuery = 3
+relevanceThreshold = 0.60
 
 # Initialize console for rich output
 console = Console()
@@ -36,6 +41,10 @@ class ResearchAgentState(BaseModel):
     summary: str = Field(
         default="",
         description="final summary of the research"
+    )
+    nTotalArticlesProcessed: int = Field(
+        default=0,
+        description="Total number of web articles processed for research"
     )
     
 class QueryList(BaseModel):
@@ -91,7 +100,7 @@ def expand_query(state: ResearchAgentState) -> dict:
         "queries": result.queries
     }
 
-def search_web(query: str) -> str:
+def search_web(query: str, state: ResearchAgentState) -> str:
     """Search the web using SearXNG and return scraped content."""
     try:
         response = requests.get(
@@ -109,19 +118,38 @@ def search_web(query: str) -> str:
             console.print(f"[yellow]⚠️  No results found for query: {query}[/yellow]")
             return ""
         text = ""
-        for result in results[:nLinksToSearchPerQuery]:
+        articleCount = 0
+        for result in results:
             url = result["url"]
             console.print(f"[dim]📄 Fetching:[/dim] {url}")
             
             downloaded = trafilatura.fetch_url(url)
-            text += str(trafilatura.extract(downloaded))
+            chunk = trafilatura.extract(downloaded)
+            if chunk is not None:
+                query_embedding = generate_embedding(query)
+                chunk_embedding = generate_embedding(chunk[:1000])
+                relevance_score = cosine_similarity(query_embedding, chunk_embedding)
+                
+                # Convert to percentage (0.0-1.0 → 0%-100%)
+                relevance_percentage = relevance_score * 100
+                
+                # Format as percentage with 1 decimal place
+                relevance_str = f"{relevance_percentage:.1f}%"
+                
+                console.print(f"[dim]Relevance:[/dim] {relevance_str}")
+                
+                if relevance_score > relevanceThreshold:
+                    text += chunk
+                    articleCount += 1
+                    state.nTotalArticlesProcessed += 1
+                    if articleCount == nLinksToSearchPerQuery:
+                        return text
+                
+                if not text:
+                    console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")
+                    return ""
         
-            if not text:
-                console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")
-                return ""
-            
         return text
-        
     except requests.exceptions.RequestException as e:
         console.print(f"[red]❌ Network error for '{query}': {e}[/red]")
         return ""
@@ -137,19 +165,135 @@ def research_topic(state: ResearchAgentState) -> dict:
     scraped_data = []
     for i, query in enumerate(state.queries, 1):
         console.print(f"\n[dim]Query {i}/{len(state.queries)}:[/dim] {query}")
-        text = search_web(query)
+        text = search_web(query, state)
         scraped_data.append(text if text else "")
     
     return {
         "scrapedData": scraped_data
     }
 
+def generate_embedding(
+    input_text: str, 
+    model: str = "nomic-embed-text", 
+    base_url: str = DEFAULT_EMBED_URL
+) -> Optional[np.ndarray]:
+    """
+    Generate embeddings for input text using a remote embedding model.
+    
+    Args:
+        input_text: The text to generate embeddings for
+        model: The model name to use (default: "nomic-embed-text")
+        base_url: The base URL of the embedding service (default: "http://localhost:8081/v1/embeddings")
+    
+    Returns:
+        A numpy array representing the embedding vector, or None if an error occurs
+    """
+    try:
+        # Prepare the JSON payload
+        payload = {
+            "input": input_text,
+            "model": model
+        }
+        
+        # Create connection
+        response = requests.post(
+            base_url,
+            json=payload,
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            timeout=30
+        )
+        
+        # Check response status
+        if response.status_code >= 200 and response.status_code < 300:
+            # Parse the JSON response
+            try:
+                json_response = response.json()
+                
+                # Extract embedding from the response
+                if "data" in json_response:
+                    data = json_response["data"]
+                    if data and len(data) > 0:
+                        embedding = data[0].get("embedding", [])
+                        if embedding:
+                            # Return as numpy array for efficient computation
+                            return np.array(embedding, dtype=np.float32)
+            except json.JSONDecodeError:
+                pass
+            
+            # Return empty array if no embedding found
+            return np.array([], dtype=np.float32)
+        else:
+            # Print error response if available
+            error_response = response.text
+            if error_response:
+                print(f"Error response (status {response.status_code}): {error_response}")
+            
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Network error: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
+
+
+def cosine_similarity(
+    embedding1: np.ndarray, 
+    embedding2: np.ndarray,
+    normalize: bool = True
+) -> float:
+    """
+    Compute cosine similarity between two embedding vectors.
+    
+    Args:
+        embedding1: First embedding vector (numpy array)
+        embedding2: Second embedding vector (numpy array)
+        normalize: If True, uses normalized dot product (more numerically stable)
+    
+    Returns:
+        Cosine similarity value between -1.0 and 1.0
+        - 1.0: identical direction
+        - 0.0: orthogonal
+        - -1.0: opposite direction
+    """
+    if embedding1.size == 0 or embedding2.size == 0:
+        return 0.0
+    
+    # Handle mismatched dimensions
+    if embedding1.shape[0] != embedding2.shape[0]:
+        raise ValueError(f"Dimension mismatch: {embedding1.shape[0]} vs {embedding2.shape[0]}")
+    
+    if normalize:
+        # Normalized dot product (more numerically stable)
+        norm1 = np.linalg.norm(embedding1)
+        norm2 = np.linalg.norm(embedding2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+        
+        return float(np.dot(embedding1, embedding2) / (norm1 * norm2))
+    else:
+        # Standard formula: (A·B) / (||A|| × ||B||)
+        dot_product = np.dot(embedding1, embedding2)
+        norm1 = np.linalg.norm(embedding1)
+        norm2 = np.linalg.norm(embedding2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+        
+        return float(dot_product / (norm1 * norm2))
+
+
 def summarize(state: ResearchAgentState) -> dict:
     """Summarize the research findings."""
     console.print(Panel.fit("[bold yellow]📝 STAGE: Summary Generation[/bold yellow]", style="yellow"))
     console.print(Rule(style="yellow"))
     console.print(f"\n[bold]Topic:[/bold] {state.topic}")
-    console.print(f"[dim]Articles processed:[/dim] {len(state.scrapedData)}")
+    console.print(f"[dim]Articles processed:[/dim] {state.nTotalArticlesProcessed}")
     
     context = [
         SystemMessage(content=f"""You are an expert at summarizing research from different individual articles.
@@ -231,10 +375,7 @@ def main():
     # Run the research
     response = graph.invoke(
         {
-            "topic": topic,
-            "queries": [],
-            "scrapedData": [],
-            "summary": ""
+            "topic": topic
         }
     )
     
