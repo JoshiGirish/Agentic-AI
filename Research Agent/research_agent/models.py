@@ -21,5 +21,18 @@ class ResearchAgentState(BaseModel):
     )
     nTotalArticlesProcessed: int = Field(
         default=0,
-        description="Total number of web articles processed for research"
+        description="total number of web articles processed for research"
     )
+    nQueriesProcessed: int = Field(
+        default=0,
+        description="total number of queried processed until now"
+    )
+    doPerQueryCompression: bool = Field(
+        default=False,
+        description="enables compression of the web search results from each query"
+    )
+    queryCacheForCompression: str = Field(
+        default="",
+        description="temporary cache containing the intermediate search result for a query"
+    )
+    

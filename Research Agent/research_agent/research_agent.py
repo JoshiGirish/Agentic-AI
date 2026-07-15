@@ -8,7 +8,7 @@ from rich.rule import Rule
 from rich.markdown import Markdown
 from config import DEFAULT_MODEL, DEFAULT_LLM_URL
 from models import ResearchAgentState
-from llm import expand_query, research_topic, summarize
+from llm import expand_query, research_topic, summarize, compress, should_compress
 
 
 def main():
@@ -21,6 +21,12 @@ def main():
         "--topic",
         type=str,
         help="The research topic to investigate"
+    )
+    parser.add_argument(
+        "-c",
+        "--compress",
+        action="store_true",
+        help="The flap to enable intermediate query result compression"
     )
     
     args = parser.parse_args()
@@ -60,10 +66,15 @@ def main():
     builder = StateGraph(ResearchAgentState)
     builder.add_node("expand", expand_query)
     builder.add_node("research", research_topic)
+    builder.add_node("compress", compress)
     builder.add_node("summarize", summarize)
     builder.add_edge(START, "expand")
     builder.add_edge("expand", "research")
-    builder.add_edge("research", "summarize")
+    builder.add_conditional_edges("research", should_compress, {
+        "compress": "compress",
+        "summarize": "summarize"
+    })
+    builder.add_edge("compress", "research")
     builder.add_edge("summarize", END)
     
     graph = builder.compile()
@@ -71,7 +82,8 @@ def main():
     # Run the research
     response = graph.invoke(
         {
-            "topic": topic
+            "topic": topic,
+            "doPerQueryCompression": args.compress
         }
     )
     

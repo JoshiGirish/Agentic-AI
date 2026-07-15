@@ -1,11 +1,6 @@
-"""LLM-related functionality for the Research Agent."""
-
 from models import ResearchAgentState
 from utils import get_llm, get_llm_with_output
 from search import search_web
-from rich.rule import Rule
-from langchain_core.messages import HumanMessage
-
 
 def expand_query(state: ResearchAgentState) -> dict:
     """Expand the user topic into multiple search queries."""
@@ -31,10 +26,24 @@ def expand_query(state: ResearchAgentState) -> dict:
     sys_msg = SystemMessage(content=f"""
     Current date: {current_date}
     
-    Generate at least three semantic search queries for the user's topic.
-    Each query should be independent and explore different angles.
-    IMPORTANT: Use the current date for any time references.
-    Return only the structured output.
+    You are an expert research assistant tasked with generating diverse search queries.
+    
+    Task: Generate at least three semantic search queries for the user's research topic.
+    
+    Guidelines:
+    1. Each query should explore a different angle or aspect of the topic
+    2. Queries should be independent but complementary
+    3. Include various perspectives: foundational concepts, recent developments, applications, controversies, methodologies
+    4. Use the current date for any time references
+    5. Queries should be concise, specific, and suitable for semantic search
+    
+    Expected output format:
+    Return a dictionary with a "queries" key containing a list of query strings.
+    
+    Example output:
+    {{"queries": ["query 1", "query 2", "query 3"]}}
+    
+    Topic: {state.topic}
     """)
     
     messages = [sys_msg, HumanMessage(content=state.topic)]
@@ -57,27 +66,84 @@ def research_topic(state: ResearchAgentState) -> dict:
     
     console = Console()
     
-    console.print(Panel.fit("[bold magenta]🔬 STAGE: Web Research[/bold magenta]", style="magenta"))
-    console.print(Rule(style="magenta"))
-    
     scraped_data = []
     nArticleCount = 0
-    for i, query in enumerate(state.queries, 1):
-        console.print(f"\n[dim]Query {i}/{len(state.queries)}:[/dim] {query}")
-        search_result = search_web(query, state)
-        scraped_data.append(search_result["text"] if search_result["text"] else "")
-        nArticleCount += search_result["nArticles"]
+    if state.doPerQueryCompression:
+        if state.nQueriesProcessed >= len(state.queries):
+            return {
+                "nQueriesProcessed": state.nQueriesProcessed + 1
+            }
+        else:        
+            console.print(Panel.fit("[bold magenta]🔬 STAGE: Web Research[/bold magenta]", style="magenta"))
+            console.print(Rule(style="magenta"))
+            query = state.queries[state.nQueriesProcessed]
+            search_result = search_web(query, state)
+            return {
+                "queryCacheForCompression": search_result["text"],
+                "nTotalArticlesProcessed": state.nTotalArticlesProcessed + search_result["nArticles"],
+                "nQueriesProcessed": state.nQueriesProcessed + 1
+            }
+    else:
+        for i, query in enumerate(state.queries, 1):
+            console.print(f"\n[dim]Query {i}/{len(state.queries)}:[/dim] {query}")
+            search_result = search_web(query, state)
+            scraped_data.append(search_result["text"] if search_result["text"] else "")
+            nArticleCount += search_result["nArticles"]
     
     return {
         "scrapedData": scraped_data,
         "nTotalArticlesProcessed": nArticleCount
     }
+    
+def compress(state: ResearchAgentState) -> dict:
+    from rich.console import Console
+    from langchain_core.messages import SystemMessage, HumanMessage
+    
+    console = Console()
+    console.print(f"[dim]Compressing results from query:[/dim] {state.queries[state.nQueriesProcessed-1]}")
+    
+    context = [
+        SystemMessage(content=f"""You are an expert at summarizing large text and articles into concise, relevant, and meaningful summaries.
+        The proposed summary must be in clean markdown code.
+        
+        Topic: {state.topic}
+        
+        Summarize the following article to keep only the relevant information required to answer the aforementioned topic:
+        
+        Guidelines:
+        1. Identify key points, findings, and conclusions
+        2. Preserve important data, statistics, and citations
+        3. Remove redundant information and tangential details
+        4. Use clear, concise language
+        5. Format output as clean markdown with appropriate headings
+        6. Aim for 150-300 words unless the content is exceptionally dense
+        
+        Article content:
+        """)
+    ]
+    querySummary = ""
+    if state.queryCacheForCompression.strip():
+        context.append(HumanMessage(content=state.queryCacheForCompression))
+        llm = get_llm()
+        querySummary = llm.invoke(context)
+    else:
+        console.print(f"[yellow]⚠️  Skipping article compression for empty results [/yellow]")
+    
+    return {
+        "scrapedData": state.scrapedData + [querySummary.content]
+    }
 
+def should_compress(state: ResearchAgentState) -> str:
+    if state.doPerQueryCompression and state.nQueriesProcessed <= len(state.queries):
+        return "compress"
+    else:
+        return "summarize"
 
 def summarize(state: ResearchAgentState) -> dict:
     """Summarize the research findings."""
     from rich.console import Console
     from rich.panel import Panel
+    from rich.rule import Rule
     from rich.markdown import Markdown
     from langchain_core.messages import SystemMessage, HumanMessage
     
@@ -89,13 +155,22 @@ def summarize(state: ResearchAgentState) -> dict:
     console.print(f"[dim]Articles processed:[/dim] {state.nTotalArticlesProcessed}")
     
     context = [
-        SystemMessage(content=f"""You are an expert at summarizing research from different individual articles.
+        SystemMessage(content=f"""You are an expert at synthesizing research from multiple articles into a cohesive summary.
         Ignore any articles that are not relevant to the topic.
-        Propose the summary in clean markdown code.
+        Propose a comprehensive summary in clean markdown code.
         
         Topic: {state.topic}
         
-        Summarize the following articles to answer the aforementioned topic: """)
+        Guidelines for the summary:
+        1. Synthesize key findings across all articles
+        2. Identify consensus and conflicting viewpoints
+        3. Highlight important methodologies and results
+        4. Structure with clear markdown headings and bullet points
+        5. Aim for 300-600 words of comprehensive coverage
+        6. Include a brief conclusion with key takeaways
+        
+        Articles to summarize:
+        """)
     ]
     
     for i, text in enumerate(state.scrapedData, 1):
