@@ -58,6 +58,10 @@ docker-compose up -d
 
 # Run the research agent
 docker-compose exec research-agent python research_agent.py --topic "Your research topic here"
+
+# Run the research agent with search result compression
+docker-compose exec research-agent python research_agent.py --topic "Your research topic here" -c
+docker-compose exec research-agent python research_agent.py --topic "Your research topic here" --compress
 ```
 
 ### Expected Output
@@ -156,3 +160,4 @@ SEARXNG_URL=http://searxng:8080/search
 DEFAULT_LLM_URL=http://localhost:8080/v1
 DEFAULT_EMBED_URL=http://localhost:8081/v1/embeddings  # Embedding service for relevance filtering
 ```
+
