@@ -77,7 +77,10 @@ def research_topic(state: ResearchAgentState) -> dict:
             console.print(Panel.fit("[bold magenta]🔬 STAGE: Web Research[/bold magenta]", style="magenta"))
             console.print(Rule(style="magenta"))
             query = state.queries[state.nQueriesProcessed]
+            console.print(f"\n[dim]Processing query {state.nQueriesProcessed + 1}/{len(state.queries)}:[/dim]")
+            console.print(f"[dim]Query:[/dim] {query}")
             search_result = search_web(query, state)
+            console.print(f"[dim]Articles found:[/dim] {search_result['nArticles']}")
             return {
                 "queryCacheForCompression": search_result["text"],
                 "nTotalArticlesProcessed": state.nTotalArticlesProcessed + search_result["nArticles"],
@@ -101,6 +104,9 @@ def compress(state: ResearchAgentState) -> dict:
     
     console = Console()
     console.print(f"[dim]Compressing results from query:[/dim] {state.queries[state.nQueriesProcessed-1]}")
+    
+    # Calculate initial token count (approximate based on character count)
+    initial_tokens = len(state.queryCacheForCompression) // 4  # Rough estimate: 4 chars per token
     
     context = [
         SystemMessage(content=f"""You are an expert at summarizing large text and articles into concise, relevant, and meaningful summaries.
@@ -126,6 +132,17 @@ def compress(state: ResearchAgentState) -> dict:
         context.append(HumanMessage(content=state.queryCacheForCompression))
         llm = get_llm()
         querySummary = llm.invoke(context)
+        
+        # Calculate compressed token count
+        compressed_tokens = len(querySummary.content) // 4
+        
+        # Calculate compression ratio
+        compression_ratio = ((initial_tokens - compressed_tokens) / initial_tokens * 100) if initial_tokens > 0 else 0
+        
+        console.print(f"\n[dim]Compression statistics:[/dim]")
+        console.print(f"   Initial tokens (approx): {initial_tokens:,}")
+        console.print(f"   Compressed tokens (approx): {compressed_tokens:,}")
+        console.print(f"   Compression: {compression_ratio:.1f}%")
     else:
         console.print(f"[yellow]⚠️  Skipping article compression for empty results [/yellow]")
     
