@@ -21,6 +21,7 @@ This project implements a multi-stage research agent built using LangGraph. The 
 - **Rich Console Output**: Beautiful terminal output with colored panels and progress indicators
 - **Docker-Ready**: Fully containerized deployment with all dependencies included
 - **Privacy-First**: Uses SearXNG for anonymous, uncensored search results
+- **Search Result Compression**: Compresses web search results per query to reduce memory usage and improve performance
 
 ---
 
