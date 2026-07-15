@@ -61,13 +61,16 @@ def research_topic(state: ResearchAgentState) -> dict:
     console.print(Rule(style="magenta"))
     
     scraped_data = []
+    nArticleCount = 0
     for i, query in enumerate(state.queries, 1):
         console.print(f"\n[dim]Query {i}/{len(state.queries)}:[/dim] {query}")
-        text = search_web(query, state)
-        scraped_data.append(text if text else "")
+        search_result = search_web(query, state)
+        scraped_data.append(search_result["text"] if search_result["text"] else "")
+        nArticleCount += search_result["nArticles"]
     
     return {
-        "scrapedData": scraped_data
+        "scrapedData": scraped_data,
+        "nTotalArticlesProcessed": nArticleCount
     }
 
 

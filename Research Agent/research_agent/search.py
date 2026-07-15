@@ -8,9 +8,10 @@ from utils import generate_embedding, cosine_similarity
 import trafilatura
 
 
-def search_web(query: str, state: ResearchAgentState) -> str:
+def search_web(query: str, state: ResearchAgentState) -> dict:
     """Search the web using SearXNG and return scraped content."""
     console = Console()
+    nTotalArticlesProcessed = 0
     
     try:
         response = requests.get(
@@ -26,7 +27,7 @@ def search_web(query: str, state: ResearchAgentState) -> str:
         
         if not results:
             console.print(f"[yellow]⚠️  No results found for query: {query}[/yellow]")
-            return ""
+            return {}
         text = ""
         articleCount = 0
         for result in results:
@@ -51,16 +52,16 @@ def search_web(query: str, state: ResearchAgentState) -> str:
                 if relevance_score > relevanceThreshold:
                     text += chunk
                     articleCount += 1
-                    state.nTotalArticlesProcessed += 1
+                    nTotalArticlesProcessed += 1
                     if articleCount == nLinksToSearchPerQuery:
-                        return text
+                        return {"text": text, "nArticles": nTotalArticlesProcessed}
             else:
                 console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")
         
-        return text
+        return {"text": text, "nArticles": nTotalArticlesProcessed}
     except requests.exceptions.RequestException as e:
         console.print(f"[red]❌ Network error for '{query}': {e}[/red]")
-        return ""
+        return {}
     except Exception as e:
         console.print(f"[red]❌ Unexpected error for '{query}': {e}[/red]")
-        return ""
+        return {}
