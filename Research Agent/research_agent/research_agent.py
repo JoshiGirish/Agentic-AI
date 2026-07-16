@@ -91,7 +91,8 @@ def main():
     console.print(Rule(style="green"))
     console.print(f"\n[bold]Final Summary:[/bold]")
     console.print(Markdown(response['summary']))
-
+    with open("summary.md", "w", encoding="utf-8") as file:
+        file.write(str(response['summary']) + "\n")
 
 if __name__ == "__main__":
     main()
