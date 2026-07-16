@@ -84,7 +84,8 @@ def research_topic(state: ResearchAgentState) -> dict:
             return {
                 "queryCacheForCompression": search_result["text"],
                 "nTotalArticlesProcessed": state.nTotalArticlesProcessed + search_result["nArticles"],
-                "nQueriesProcessed": state.nQueriesProcessed + 1
+                "nQueriesProcessed": state.nQueriesProcessed + 1,
+                "visitedUrls": search_result["urls"]
             }
     else:
         for i, query in enumerate(state.queries, 1):

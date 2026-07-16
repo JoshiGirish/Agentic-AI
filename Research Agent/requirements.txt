@@ -5,3 +5,4 @@ trafilatura>=1.0.0
 requests>=2.31.0
 rich>=13.0.0
 numpy>=2.4.6
+w3lib>=2.4.1

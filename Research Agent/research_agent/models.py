@@ -35,4 +35,8 @@ class ResearchAgentState(BaseModel):
         default="",
         description="temporary cache containing the intermediate search result for a query"
     )
+    visitedUrls: set[str] = Field(
+        default=set(),
+        description="set of urls visited by the agent for researching the topic"
+    )
     

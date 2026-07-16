@@ -6,7 +6,7 @@ from config import SEARXNG_URL, nLinksToSearchPerQuery, relevanceThreshold
 from models import ResearchAgentState
 from utils import generate_embedding, cosine_similarity
 import trafilatura
-
+from w3lib.url import canonicalize_url
 
 def search_web(query: str, state: ResearchAgentState) -> dict:
     """Search the web using SearXNG and return scraped content."""
@@ -30,35 +30,37 @@ def search_web(query: str, state: ResearchAgentState) -> dict:
             return {}
         text = ""
         articleCount = 0
+        urls = state.visitedUrls
         for result in results:
             url = result["url"]
-            console.print(f"[dim]📄 Fetching:[/dim] {url}")
-            
-            downloaded = trafilatura.fetch_url(url)
-            chunk = trafilatura.extract(downloaded)
-            if chunk is not None:
-                query_embedding = generate_embedding(query)
-                chunk_embedding = generate_embedding(chunk[:1000])
-                relevance_score = cosine_similarity(query_embedding, chunk_embedding)
-                
-                # Convert to percentage (0.0-1.0 → 0%-100%)
-                relevance_percentage = relevance_score * 100
-                
-                # Format as percentage with 1 decimal place
-                relevance_str = f"{relevance_percentage:.1f}%"
-                
-                console.print(f"[dim]Relevance:[/dim] {relevance_str}")
-                
-                if relevance_score > relevanceThreshold:
-                    text += chunk
-                    articleCount += 1
-                    nTotalArticlesProcessed += 1
-                    if articleCount == nLinksToSearchPerQuery:
-                        return {"text": text, "nArticles": nTotalArticlesProcessed}
-            else:
-                console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")
+            if url not in urls:
+                console.print(f"[dim]📄 Fetching:[/dim] {url}")
+                urls.add(canonicalize_url(url))
+                downloaded = trafilatura.fetch_url(url)
+                chunk = trafilatura.extract(downloaded)
+                if chunk is not None:
+                    query_embedding = generate_embedding(query)
+                    chunk_embedding = generate_embedding(chunk[:1000])
+                    relevance_score = cosine_similarity(query_embedding, chunk_embedding)
+                    
+                    # Convert to percentage (0.0-1.0 → 0%-100%)
+                    relevance_percentage = relevance_score * 100
+                    
+                    # Format as percentage with 1 decimal place
+                    relevance_str = f"{relevance_percentage:.1f}%"
+                    
+                    console.print(f"[dim]Relevance:[/dim] {relevance_str}")
+                    
+                    if relevance_score > relevanceThreshold:
+                        text += chunk
+                        articleCount += 1
+                        nTotalArticlesProcessed += 1
+                        if articleCount == nLinksToSearchPerQuery:
+                            return {"text": text, "nArticles": nTotalArticlesProcessed, "urls": urls}
+                else:
+                    console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")
         
-        return {"text": text, "nArticles": nTotalArticlesProcessed}
+        return {"text": text, "nArticles": nTotalArticlesProcessed, "urls": urls}
     except requests.exceptions.RequestException as e:
         console.print(f"[red]❌ Network error for '{query}': {e}[/red]")
         return {}
