@@ -2,13 +2,13 @@
 
 import requests
 from rich.console import Console
-from config import SEARXNG_URL, nLinksToSearchPerQuery, relevanceThreshold
+from config import SEARXNG_URL, relevanceThreshold
 from models import ResearchAgentState
 from utils import generate_embedding, cosine_similarity
 import trafilatura
 from w3lib.url import canonicalize_url
 
-def search_web(query: str, state: ResearchAgentState) -> dict:
+def search_web(query: str, state: ResearchAgentState, nLinks: int = 3) -> dict:
     """Search the web using SearXNG and return scraped content."""
     console = Console()
     nTotalArticlesProcessed = 0
@@ -55,7 +55,7 @@ def search_web(query: str, state: ResearchAgentState) -> dict:
                         text += chunk
                         articleCount += 1
                         nTotalArticlesProcessed += 1
-                        if articleCount == nLinksToSearchPerQuery:
+                        if articleCount == nLinks:
                             return {"text": text, "nArticles": nTotalArticlesProcessed, "urls": urls}
                 else:
                     console.print(f"[yellow]⚠️  Could not extract content from: {url}[/yellow]")

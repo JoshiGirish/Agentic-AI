@@ -4,7 +4,7 @@ import json
 import requests
 import numpy as np
 from typing import Optional
-from config import DEFAULT_MODEL, DEFAULT_LLM_URL, DEFAULT_EMBED_URL, nQueriesToGenerate
+from config import DEFAULT_MODEL, DEFAULT_LLM_URL, DEFAULT_EMBED_URL
 
 
 def get_llm():
@@ -21,8 +21,12 @@ def get_llm():
     )
 
 
-def get_llm_with_output():
-    """Get the LLM with structured output capability."""
+def get_llm_with_output(nQueries: int = 3):
+    """Get the LLM with structured output capability.
+    
+    Args:
+        nQueries: Number of queries to generate (default: 3)
+    """
     from langchain_openai import ChatOpenAI
     from langchain_core.messages import SystemMessage, HumanMessage
     from pydantic import BaseModel, Field
@@ -32,7 +36,7 @@ def get_llm_with_output():
     class QueryList(BaseModel):
         """Model for query list output."""
         queries: list[str] = Field(
-            min_length=nQueriesToGenerate,
+            min_length=nQueries,
             description="Three or more independent search engine queries."
         )
     

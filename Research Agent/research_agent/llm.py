@@ -2,7 +2,7 @@ from models import ResearchAgentState
 from utils import get_llm, get_llm_with_output
 from search import search_web
 
-def expand_query(state: ResearchAgentState) -> dict:
+def expand_query(state: ResearchAgentState, nQueries: int = 3) -> dict:
     """Expand the user topic into multiple search queries."""
     from rich.console import Console
     from rich.panel import Panel
@@ -20,7 +20,7 @@ def expand_query(state: ResearchAgentState) -> dict:
     current_date = datetime.now().strftime("%B %d, %Y")
     console.print(f"[dim]Current date:[/dim] {current_date}")
     
-    llm = get_llm_with_output()
+    llm = get_llm_with_output(nQueries)
     
     # Include current date in system prompt to prevent outdated references
     sys_msg = SystemMessage(content=f"""
@@ -28,7 +28,7 @@ def expand_query(state: ResearchAgentState) -> dict:
     
     You are an expert research assistant tasked with generating diverse search queries.
     
-    Task: Generate at least three semantic search queries for the user's research topic.
+    Task: Generate at least {nQueries} semantic search queries for the user's research topic.
     
     Guidelines:
     1. Each query should explore a different angle or aspect of the topic

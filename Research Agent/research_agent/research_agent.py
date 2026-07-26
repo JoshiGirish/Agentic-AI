@@ -6,9 +6,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.markdown import Markdown
-from config import DEFAULT_MODEL, DEFAULT_LLM_URL
+from config import DEFAULT_MODEL, DEFAULT_LLM_URL, nQueriesToGenerate, nLinksToSearchPerQuery
 from models import ResearchAgentState
-from llm import expand_query, research_topic, summarize, compress, should_compress
+from llm import expand_query, research_topic, compress, summarize, should_compress
 
 
 def main():
@@ -27,6 +27,18 @@ def main():
         "--compress",
         action="store_true",
         help="The flap to enable intermediate query result compression"
+    )
+    parser.add_argument(
+        "--nQueries",
+        type=int,
+        default=nQueriesToGenerate,
+        help=f"Number of queries to generate (default: {nQueriesToGenerate})"
+    )
+    parser.add_argument(
+        "--nLinks",
+        type=int,
+        default=nLinksToSearchPerQuery,
+        help=f"Number of links to search per query (default: {nLinksToSearchPerQuery})"
     )
     
     args = parser.parse_args()
@@ -59,12 +71,14 @@ def main():
     console.print(Rule(style="white"))
     
     console.print(f"\n[bold]📝 Research Topic:[/bold] {topic}")
+    console.print(f"[dim]Queries to generate:[/dim] {args.nQueries}")
+    console.print(f"[dim]Links to search per query:[/dim] {args.nLinks}")
     console.print("\n[bold]Starting research process...[/bold]\n")
     
     # Build the graph
     from langgraph.graph import StateGraph, START, END
     builder = StateGraph(ResearchAgentState)
-    builder.add_node("expand", expand_query)
+    builder.add_node("expand", lambda state: expand_query(state, args.nQueries))
     builder.add_node("research", research_topic)
     builder.add_node("compress", compress)
     builder.add_node("summarize", summarize)
@@ -83,7 +97,8 @@ def main():
     response = graph.invoke(
         {
             "topic": topic,
-            "doPerQueryCompression": args.compress
+            "doPerQueryCompression": args.compress,
+            "nLinksToSearchPerQuery": args.nLinks
         }
     )
     
