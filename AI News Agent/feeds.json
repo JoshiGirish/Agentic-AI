@@ -1,0 +1,122 @@
+{
+    "feeds": {
+        "ai_news_and_daily_updates": [
+            "https://www.artificialintelligence-news.com/feed/",
+            "https://www.unite.ai/feed/",
+            "https://aiweekly.co/issues.rss",
+            "https://theaiinsider.tech/feed/",
+            "https://aiwire.net/feed/",
+            "https://insideainews.com/feed/"
+        ],
+        "ai_research_labs_and_foundations": [
+            "https://research.google/blog/rss/",
+            "https://bair.berkeley.edu/blog/feed.xml",
+            "https://news.mit.edu/rss/topic/artificial-intelligence",
+            "https://openai.com/news/rss.xml",
+            "https://intelligence.org/feed/",
+            "https://eairblog.eu/feed/"
+        ],
+        "mainstream_tech_and_business_ai": [
+            "https://www.wired.com/feed/tag/ai/latest/rss",
+            "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+            "https://arstechnica.com/ai/feed/",
+            "https://techcrunch.com/category/artificial-intelligence/feed/",
+            "https://venturebeat.com/category/ai/feed/",
+            "https://www.ft.com/artificial-intelligence?format=rss",
+            "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+            "https://www.theguardian.com/technology/artificialintelligenceai/rss",
+            "https://www.technologyreview.com/topic/artificial-intelligence/feed/",
+            "https://www.fastcompany.com/section/artificial-intelligence/feed"
+        ],
+        "machine_learning_and_data_science": [
+            "https://machinelearningmastery.com/blog/feed/",
+            "https://www.kdnuggets.com/feed",
+            "https://www.oreilly.com/radar/topics/ai-ml/feed/index.xml",
+            "https://blogs.rstudio.com/ai/index.xml",
+            "https://theaisummer.com/feed/",
+            "https://towardsdatascience.com/feed",
+            "https://www.datasciencecentral.com/feed/",
+            "https://www.analyticsvidhya.com/feed/"
+        ],
+        "generative_ai_and_llm": [
+            "https://copyleaks.com/blog/feed",
+            "https://gptzero.me/news/rss",
+            "https://aleph-alpha.com/feed",
+            "https://contextual.ai/blog/feed",
+            "https://aibusiness.com/rss.xml"
+        ],
+        "cloud_and_big_tech_ai_blogs": [
+            "https://aws.amazon.com/blogs/machine-learning/feed/",
+            "https://cloud.google.com/blog/products/ai-machine-learning/rss/",
+            "https://news.microsoft.com/source/topics/ai/feed/",
+            "https://blogs.cisco.com/ai/feed",
+            "https://blogs.nvidia.com/feed/",
+            "https://www.ibm.com/blogs/research/feed/",
+            "https://www.oracle.com/artificial-intelligence/rss.xml",
+            "https://engineering.fb.com/feed/",
+            "https://deepmind.google/blog/rss.xml"
+        ],
+        "ai_industry_and_enterprise": [
+            "https://blogs.sas.com/content/topic/artificial-intelligence/feed/",
+            "https://www.cgi.com/en/rss/artificial-intelligence",
+            "https://www.uipath.com/blog/ai/rss.xml",
+            "https://www.usaii.org/feed",
+            "https://v7labs.com/blog/rss.xml",
+            "https://research.aimultiple.com/feed/",
+            "https://clearimageai.com/blog/feed/"
+        ],
+        "ai_tools_and_platforms": [
+            "https://huggingface.co/blog/feed.xml",
+            "https://replicate.com/blog/rss.xml",
+            "https://cohere.com/blog/rss.xml",
+            "https://www.pinecone.io/blog/rss/",
+            "https://www.langchain.com/blog/rss.xml",
+            "https://weightsandbiases.com/feed.xml"
+        ],
+        "ai_for_business_applications": [
+            "https://www.marketingaiinstitute.com/blog/rss.xml",
+            "https://blog.kore.ai/rss.xml",
+            "https://drift.com/blog/feed/",
+            "https://www.salesforce.com/blog/category/artificial-intelligence/feed/",
+            "https://www.zendesk.com/blog/tags/artificial-intelligence/rss.xml",
+            "https://www.freshworks.com/company/blog/rss.xml",
+            "https://www.hubspot.com/blog/topic/ai/rss.xml"
+        ],
+        "computer_vision_and_nlp": [
+            "https://yseop.com/category/blog/feed/",
+            "https://www.paralleldots.com/resources/blog/feed/"
+        ],
+        "ai_ethics_policy_and_society": [
+            "https://theconversation.com/topics/artificial-intelligence-ai/articles.atom",
+            "https://aiforgood.itu.int/feed/",
+            "https://partnershiponai.org/feed/",
+            "https://ainowinstitute.org/feed/",
+            "https://www.brookings.edu/topic/artificial-intelligence/feed/"
+        ],
+        "ai_education_and_tutorials": [
+            "https://dlabs.ai/feed/",
+            "https://danrose.ai/blog?format=rss",
+            "https://www.greatlearning.in/blog/category/artificial-intelligence/feed/",
+            "https://www.aiworldschool.com/blog/feed/",
+            "https://iris.ai/blog/feed/",
+            "https://aiaspirant.com/feed/"
+        ],
+        "specialized_ai_verticals": [
+            "https://www.pathai.com/blog/feed/",
+            "https://insitro.com/blog/rss.xml",
+            "https://labelbox.com/blog/rss.xml",
+            "https://scale.com/blog/rss.xml",
+            "https://www.c3.ai/blog/feed/",
+            "https://www.tempus.com/feed/",
+            "https://www.zebra-med.com/feed/"
+        ],
+        "ai_startups_and_funding": [
+            "https://news.crunchbase.com/sections/ai/feed/",
+            "https://www.geekwire.com/tag/ai/feed/",
+            "https://www.adweek.com/category/artificial-intelligence/feed/",
+            "https://berkshiregrey.com/feed/"
+        ]
+    },
+    "total_feeds": 107,
+    "categories": 17
+}
