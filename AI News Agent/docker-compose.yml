@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  ai-news-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["sleep", "infinity"]
+    container_name: ai-news-agent
+    environment:
+      - LLM_URL=${LLM_URL:-http://localhost:11434/v1/chat}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - FEEDS_FILE=/app/feeds.json
+      - LOG_FILE=/app/news.log
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib; urllib.request.urlopen('http://localhost:8080/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
