@@ -148,12 +148,14 @@ with open("feeds.json", "r", encoding="utf-8") as f:
 yesterday = date.today() - timedelta(days=1)
 
 
-# Iterate through all feed categories
-for category, feeds in data["feeds"].items():
+# Iterate through all feeds 
+for feed in data["feeds"]:
+    category = feed.get("category", "Uncategorized")
+    feed_url = feed.get("url", "")
 
     print(f"\n=== {category} ===")
 
-    for feed_url in feeds:
+    for feed_url in [feed_url]:
 
         try:
             d = feedparser.parse(feed_url)
