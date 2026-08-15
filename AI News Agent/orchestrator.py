@@ -6,12 +6,7 @@ from typing import Optional, List
 from datetime import datetime
 from agents import (
     NewsAgentState,
-    create_pipeline,
-    run_pipeline,
-    FeedParserAgent,
-    ContentFetcherAgent,
-    SummarizationAgent,
-    DiscordPosterAgent,
+    run_pipeline
 )
 
 
@@ -40,7 +35,7 @@ class FeedsManager:
         if os.path.exists(self.feeds_file):
             try:
                 with open(self.feeds_file, "r") as f:
-                    self.feeds = json.load(f)["feeds"]
+                    self.feeds = json.load(f)
                 print(f"Loaded {len(self.feeds)} feeds from {self.feeds_file}")
                 return self.feeds
             except (json.JSONDecodeError, IOError) as e:
@@ -143,6 +138,8 @@ class AINewsOrchestrator:
         """
         feed_url = feed["url"]
         name = feed.get("name", "Untitled")
+        if name == "Untitled":
+            return None
         category = feed.get("category", "General")
 
         self.log(f"Processing feed: {name} ({feed_url})", "INFO")
