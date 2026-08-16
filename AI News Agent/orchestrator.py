@@ -4,8 +4,6 @@ import os
 import json
 from typing import Optional, List
 from datetime import datetime
-
-import httpx
 from agents import (
     NewsAgentState,
     run_pipeline
@@ -129,58 +127,49 @@ class AINewsOrchestrator:
             pass
 
     def process_single_feed(self, feed: dict) -> Optional[NewsAgentState]:
-        """
-        Process a single feed item through the pipeline.
+        """Process a single feed item through the pipeline."""
 
-        Args:
-            feed: Feed dictionary with url, name, category
-
-        Returns:
-            Processed state or None if failed
-        """
         feed_url = feed["url"]
         name = feed.get("name", "Untitled")
+
         if name == "Untitled":
             return None
+
         category = feed.get("category", "General")
 
         self.log(f"Processing feed: {name} ({feed_url})", "INFO")
 
         try:
-            # Run the pipeline
             result = run_pipeline(feed_url, category=category)
 
-            # Extract results
             feed_data = result.get("feed_data", {})
 
-            # Update feed metadata
             feed["last_processed"] = datetime.now().isoformat()
             feed["name"] = name
             feed["category"] = category
 
-            # Save updated feeds
-            self.feeds_manager.save_feeds(self.feeds_manager.get_feeds())
+            self.feeds_manager.save_feeds(
+                self.feeds_manager.get_feeds()
+            )
+
+            title = feed_data.get("title") or name
 
             self.log(
-                f"✓ Processed: {feed_data.get('title', 'Untitled')}",
+                f"✓ Processed: {title}",
                 "INFO",
-            )            
-
-            async def clear_llama_slots():
-                async with httpx.AsyncClient() as client:
-                    for slot_id in (0, 1):
-                        response = await client.post(
-                            f"http://localhost:8080/slots/{slot_id}?action=erase"
-                        )
-                        response.raise_for_status()
+            )
 
             return result
 
         except Exception as e:
-            self.log(f"✗ Error processing {feed_url}: {e}", "ERROR")
+            self.log(
+                f"✗ Error processing {feed_url}: {e}",
+                "ERROR",
+            )
             self.error_count += 1
             return None
-
+                
+                
     def process_all_feeds(self) -> List[dict]:
         """
         Process all loaded feeds.
