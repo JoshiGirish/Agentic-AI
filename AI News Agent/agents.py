@@ -301,7 +301,7 @@ class SummarizationAgent(BaseAgent):
 
             The output MUST:
             - Be exactly ONE paragraph.
-            - Contain plain text only (you can use bold/italic fonts sparingly, if needed).
+            - Contain plain text only 
             - Contain no Markdown.
             - Contain no title or headline.
             - Contain no headings or sections.
@@ -310,6 +310,7 @@ class SummarizationAgent(BaseAgent):
             - Contain no emojis.
             - Contain no line breaks.
             - Return ONLY the article description.
+            - Color/highlight important keywords/numbers
 
             If article content is unavailable, return exactly:
 
@@ -410,7 +411,7 @@ class SummarizationAgent(BaseAgent):
             prompt = self.system_prompt + state["article_content"]
 
             if len(prompt) > 15000:
-                prompt = prompt[-15000:]
+                prompt = prompt[:15000]
 
             response = self.llm.invoke([{"role": "user", "content": prompt}])
 

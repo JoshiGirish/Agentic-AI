@@ -4,6 +4,8 @@ import os
 import json
 from typing import Optional, List
 from datetime import datetime
+
+import httpx
 from agents import (
     NewsAgentState,
     run_pipeline
@@ -150,13 +152,11 @@ class AINewsOrchestrator:
 
             # Extract results
             feed_data = result.get("feed_data", {})
-            summary = result.get("summary", "")
 
             # Update feed metadata
             feed["last_processed"] = datetime.now().isoformat()
             feed["name"] = name
             feed["category"] = category
-            feed["summary"] = summary[:500]  # Truncate for storage
 
             # Save updated feeds
             self.feeds_manager.save_feeds(self.feeds_manager.get_feeds())
@@ -164,7 +164,15 @@ class AINewsOrchestrator:
             self.log(
                 f"✓ Processed: {feed_data.get('title', 'Untitled')}",
                 "INFO",
-            )
+            )            
+
+            async def clear_llama_slots():
+                async with httpx.AsyncClient() as client:
+                    for slot_id in (0, 1):
+                        response = await client.post(
+                            f"http://localhost:8080/slots/{slot_id}?action=erase"
+                        )
+                        response.raise_for_status()
 
             return result
 
