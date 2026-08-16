@@ -10,3 +10,4 @@ requests==2.34.2
 
 # Environment management
 python-dotenv==1.2.2
+trafilatura==2.2.0
