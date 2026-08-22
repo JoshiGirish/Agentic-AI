@@ -19,3 +19,58 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - agent-network
+
+  # ========================================================================
+  # Discord Poster MCP Server
+  # ========================================================================
+  ai-news-mcp:
+    build:
+      context: ./mcp_server
+      dockerfile: Dockerfile
+    container_name: ai-news-mcp
+    ports:
+      - "8000:8000"
+    environment:
+      # Set your Discord webhook URL here
+      # You can also set this via the host environment variable:
+      # DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    networks:
+      - agent-network
+
+# ========================================================================
+# Networks
+# ========================================================================
+networks:
+  agent-network:
+    driver: bridge

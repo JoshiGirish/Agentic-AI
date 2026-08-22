@@ -1,5 +1,6 @@
 """Agent implementations for the AI News Multi-Agent System."""
 
+import asyncio
 import os
 from typing import Optional, TypedDict
 from langgraph.graph import StateGraph, START, END
@@ -31,6 +32,7 @@ class NewsAgentState(TypedDict, total=False):
     summary: str
     image_url: Optional[str]
     category: str
+    discord_result: str
 
 
 # ============================================================================
@@ -165,7 +167,6 @@ class FeedParserAgent(BaseAgent):
                     return url
 
         return None
-
 
 # ============================================================================
 # Content Fetcher Agent
@@ -399,7 +400,7 @@ class SummarizationAgent(BaseAgent):
         )
     
 
-    def process(self, state: NewsAgentState) -> NewsAgentState:
+    async def process(self, state: NewsAgentState) -> NewsAgentState:
         """Summarize the article content."""
         if not state.get("article_content"):
             return state
@@ -413,7 +414,7 @@ class SummarizationAgent(BaseAgent):
             if len(prompt) > 15000:
                 prompt = prompt[:15000]
 
-            response = self.llm.invoke([{"role": "user", "content": prompt}])
+            response = await self.llm.ainvoke([{"role": "user", "content": prompt}])
 
             summary = response.content if hasattr(response, "content") else str(response)
             summary = summary.strip()
@@ -432,71 +433,119 @@ class SummarizationAgent(BaseAgent):
 # ============================================================================
 
 class DiscordPosterAgent(BaseAgent):
-    """Agent responsible for posting summaries to Discord."""
+    """Agent responsible for deciding whether/how to post to Discord."""
 
-    def __init__(self, webhook_url: Optional[str] = None):
+    def __init__(self, mcp_url: str = "http://ai-news-mcp:8000/mcp"):
         super().__init__(
             "DiscordPosterAgent",
-            "Posts summaries to Discord webhook"
+            "Uses an MCP Discord server to publish news articles"
         )
-        self.webhook_url = webhook_url or os.getenv("WEBHOOK_URL", "")
-        self.session = None
 
-    def initialize(self):
-        """Initialize HTTP session for Discord webhook."""
-        import requests
-        self.session = requests.Session()
-        self.session.headers.update({
-            "Content-Type": "application/json",
+        self.mcp_url = mcp_url
+        self.mcp_client = None
+        self.agent = None
+
+    async def initialize(self):
+        """Connect to the Discord MCP server and create the agent."""
+        
+        from langchain_openai import ChatOpenAI
+        from pydantic import SecretStr
+        from langchain_mcp_adapters.client import MultiServerMCPClient
+        from langchain.agents import create_agent
+
+
+        self.mcp_client = MultiServerMCPClient(
+            {
+                "discord": {
+                    "transport": "streamable_http",
+                    "url": self.mcp_url,
+                }
+            }
+        )
+
+        tools = await self.mcp_client.get_tools()
+
+        # Don't give configuration tools to the LLM.
+        tools = [
+            tool
+            for tool in tools
+            if tool.name in {
+                "post_discord_article",
+                "get_discord_status",
+            }
+        ]
+
+        print("Discord MCP tools:")
+        for tool in tools:
+            print(f"  - {tool.name}")
+
+        llm = ChatOpenAI(
+            model=LLM_MODEL,
+            base_url=LLM_URL,
+            reasoning_effort="low",
+            api_key=SecretStr("dummy-key"),
+            temperature=0.0,
+        )
+
+        self.agent = create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt="""
+                    You are the Discord publishing agent for an AI news system.
+
+                    Your job is to decide whether a news article should be posted
+                    to Discord and, when appropriate, use the available Discord
+                    MCP tools to publish it.
+
+                    When posting an article:
+                    - Use the article title exactly as provided.
+                    - Use the provided summary as the content.
+                    - Use the original article URL.
+                    - Include the image URL when available.
+                    - Include the category when available.
+
+                    Do not invent URLs, titles, summaries, or images.
+
+                    Only post an article when explicitly instructed to publish it.
+
+                    After calling the Discord tool, report whether the operation succeeded.
+                    """,
+        )
+
+    async def process(self, state: NewsAgentState) -> NewsAgentState:
+
+        if self.agent is None:
+            await self.initialize()
+
+        feed_data = state.get("feed_data", {})
+
+        result = await self.agent.ainvoke({
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"""
+                        Publish this news article to Discord.
+
+                        Title:
+                        {feed_data.get("title", "")}
+
+                        Summary:
+                        {state.get("summary", "")}
+
+                        URL:
+                        {feed_data.get("link", "")}
+
+                        Image:
+                        {feed_data.get("image", "")}
+
+                        Category:
+                        {feed_data.get("category", "")}
+                        """
+                }
+            ]
         })
 
-    def process(self, state: NewsAgentState) -> NewsAgentState:
-        """Post the summary to Discord."""
-        if not self.webhook_url:
-            print("No webhook URL configured. Skipping Discord posting.")
-            return state
-
-        if self.session is None:
-            self.initialize()
-
-        embed = {
-            "title": state.get("feed_data", {}).get("title", "Untitled"),
-            "url": state.get("feed_data", {}).get("link", ""),
-        }
-        
-        if embed["title"] == "Untitled":
-            return state
-
-        category = state.get("feed_data", {}).get("category", "General")
-        if category:
-            embed["footer"] = {"text": category}
-
-        image_url = state.get("feed_data", {}).get("image")
-        if image_url:
-            embed["thumbnail"] = {"url": image_url}
-
-        summary = state.get("summary", "")
-        if len(summary) > 1000:
-            summary = summary[:1000] + "..."
-        if summary:
-            embed["description"] = summary
-
-        payload = {"embeds": [embed]}
-
-        try:
-            response = self.session.post(
-                self.webhook_url,
-                json=payload,
-                timeout=15
-            )
-
-            if response.status_code == 204:
-                print(f"✓ Sent to Discord: {state.get('feed_data', {}).get('title', 'Untitled')}")
-            else:
-                print(f"⚠ Discord response: {response.status_code}")
-
-        except Exception as e:
-            print(f"✗ Error posting to Discord: {e}")
+        state["discord_result"] = result["messages"][-1].content
 
         return state
 
@@ -512,16 +561,16 @@ def create_pipeline() -> StateGraph:
     builder = StateGraph(NewsAgentState)
 
     feed_parser = FeedParserAgent()
-    builder.add_node("feed_parser", lambda s: feed_parser.process(s))
+    builder.add_node("feed_parser", feed_parser.process)
 
     content_fetcher = ContentFetcherAgent()
-    builder.add_node("content_fetcher", lambda s: content_fetcher.process(s))
+    builder.add_node("content_fetcher", content_fetcher.process)
 
     summarizer = SummarizationAgent()
-    builder.add_node("summarizer", lambda s: summarizer.process(s))
+    builder.add_node("summarizer", summarizer.process)
 
     poster = DiscordPosterAgent()
-    builder.add_node("poster", lambda s: poster.process(s))
+    builder.add_node("poster", poster.process)
 
     builder.add_edge(START, "feed_parser")
     builder.add_edge("feed_parser", "content_fetcher")
@@ -534,7 +583,7 @@ def create_pipeline() -> StateGraph:
     return graph
 
 
-def run_pipeline(feed_url: str, category: str = "General") -> dict:
+async def run_pipeline(feed_url: str, category: str = "General") -> dict:
     """Run the complete pipeline for a single feed item."""
     graph = create_pipeline()
 
@@ -542,12 +591,12 @@ def run_pipeline(feed_url: str, category: str = "General") -> dict:
     state["feed_url"] = feed_url
     state["category"] = category
 
-    result = graph.invoke(state)
+    result = await graph.ainvoke(state)
 
     return result
 
 
-if __name__ == "__main__":
+async def main():
     import json
 
     test_feed = "https://techcrunch.com/feed/"
@@ -555,7 +604,7 @@ if __name__ == "__main__":
     print("Running AI News Multi-Agent Pipeline...\n")
     print(f"Processing feed: {test_feed}\n")
 
-    result = run_pipeline(test_feed, category="Technology")
+    result = await run_pipeline(test_feed, category="Technology")
 
     print("\n" + "=" * 60)
     print("Pipeline Results:")
@@ -571,3 +620,7 @@ if __name__ == "__main__":
         print(f"\nSummary:\n{result['summary'][:500]}...")
 
     print("\n" + "=" * 60)
+    
+
+if __name__ == "__main__":
+    asyncio.run(main())

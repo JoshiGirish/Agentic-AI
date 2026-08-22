@@ -126,7 +126,7 @@ class AINewsOrchestrator:
         except IOError:
             pass
 
-    def process_single_feed(self, feed: dict) -> Optional[NewsAgentState]:
+    async def process_single_feed(self, feed: dict) -> Optional[NewsAgentState]:
         """Process a single feed item through the pipeline."""
 
         feed_url = feed["url"]
@@ -140,7 +140,7 @@ class AINewsOrchestrator:
         self.log(f"Processing feed: {name} ({feed_url})", "INFO")
 
         try:
-            result = run_pipeline(feed_url, category=category)
+            result = await run_pipeline(feed_url, category=category)
 
             feed_data = result.get("feed_data", {})
 
@@ -160,7 +160,10 @@ class AINewsOrchestrator:
             )
 
             return result
-
+        except BaseException as e:
+            import traceback
+            traceback.print_exception(e)
+            raise
         except Exception as e:
             self.log(
                 f"✗ Error processing {feed_url}: {e}",
@@ -170,7 +173,7 @@ class AINewsOrchestrator:
             return None
                 
                 
-    def process_all_feeds(self) -> List[dict]:
+    async def process_all_feeds(self) -> List[dict]:
         """
         Process all loaded feeds.
 
@@ -188,7 +191,7 @@ class AINewsOrchestrator:
 
         for feed in feeds:
             print(f"feed ---------> {feed}")
-            result = self.process_single_feed(feed)
+            result = await self.process_single_feed(feed)
             if result:
                 results.append(result)
                 self.processed_count += 1
@@ -200,7 +203,7 @@ class AINewsOrchestrator:
 
         return results
 
-    def process_url(self, url: str, name: str = "", category: str = "") -> dict:
+    async def process_url(self, url: str, name: str = "", category: str = "") -> dict:
         """
         Process a single URL (not from a feed file).
 
@@ -216,7 +219,7 @@ class AINewsOrchestrator:
         self.feeds_manager.add_feed(url, name, category)
 
         # Process
-        result = self.process_single_feed({
+        result = await self.process_single_feed({
             "url": url,
             "name": name,
             "category": category,
@@ -238,7 +241,7 @@ class AINewsOrchestrator:
 # Main Entry Point
 # ============================================================================
 
-def main():
+async def main():
     """Main entry point for the orchestrator."""
     import argparse
 
@@ -287,7 +290,7 @@ def main():
     # Handle add command
     if args.add:
         orchestrator.log(f"Adding feed: {args.add}", "INFO")
-        orchestrator.process_url(
+        await orchestrator.process_url(
             url=args.add,
             name=args.name,
             category=args.category,
@@ -302,7 +305,7 @@ def main():
         return
 
     # Process all feeds
-    orchestrator.process_all_feeds()
+    await orchestrator.process_all_feeds()
 
     # Print statistics
     stats = orchestrator.get_statistics()
@@ -313,4 +316,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())

@@ -9,7 +9,7 @@ import json
 # Configuration
 # ============================================================================
 
-DEFAULT_LLM_URL = os.getenv("LLM_URL", "http://localhost:8080/v1/chat")
+DEFAULT_LLM_URL = os.getenv("LLM_URL", "http://localhost:8080/v1")
 
 
 # ============================================================================
