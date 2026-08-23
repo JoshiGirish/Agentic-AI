@@ -6,13 +6,11 @@ from agents.summarization import SummarizationAgent
 from agents.discord_poster import DiscordPosterAgent
 
 from agents.state import NewsAgentState
+from langgraph.graph import StateGraph, START, END
 
 
-def create_pipeline() -> "StateGraph":
+def create_pipeline() -> StateGraph:
     """Create the complete agent pipeline using LangGraph."""
-    from langgraph.graph import StateGraph, START, END
-
-    state = NewsAgentState()
 
     builder = StateGraph(NewsAgentState)
 

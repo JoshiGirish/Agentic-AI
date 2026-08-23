@@ -3,6 +3,7 @@
 from .base import BaseAgent
 from .config import LLM_MODEL, LLM_URL
 from .state import NewsAgentState
+from prompts import DISCORD_POSTER_SYSTEM_PROMPT
 
 
 class DiscordPosterAgent(BaseAgent):
@@ -62,26 +63,7 @@ class DiscordPosterAgent(BaseAgent):
         self.agent = create_agent(
             model=llm,
             tools=tools,
-            system_prompt="""
-                    You are the Discord publishing agent for an AI news system.
-
-                    Your job is to decide whether a news article should be posted
-                    to Discord and, when appropriate, use the available Discord
-                    MCP tools to publish it.
-
-                    When posting an article:
-                    - Use the article title exactly as provided.
-                    - Use the provided summary as the content.
-                    - Use the original article URL.
-                    - Include the image URL when available.
-                    - Include the category when available.
-
-                    Do not invent URLs, titles, summaries, or images.
-
-                    Only post an article when explicitly instructed to publish it.
-
-                    After calling the Discord tool, report whether the operation succeeded.
-                    """,
+            system_prompt=DISCORD_POSTER_SYSTEM_PROMPT,
         )
 
     async def process(self, state: NewsAgentState) -> NewsAgentState:
