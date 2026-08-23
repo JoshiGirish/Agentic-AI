@@ -1,24 +1,4 @@
-"""AI News Multi-Agent System - Main entry point.
-
-This module provides a clean public API for the multi-agent news processing system.
-
-Usage:
-    from agents import FeedParserAgent, ContentFetcherAgent, SummarizationAgent, DiscordPosterAgent
-    from agents import create_pipeline, run_pipeline
-
-    # Create agents
-    parser = FeedParserAgent()
-    fetcher = ContentFetcherAgent()
-    summarizer = SummarizationAgent()
-    poster = DiscordPosterAgent()
-
-    # Or use the pipeline directly
-    graph = create_pipeline()
-    result = await run_pipeline("https://techcrunch.com/feed/", category="Technology")
-"""
-
-import asyncio
-from typing import Optional
+"""Pipeline orchestration for the AI News Multi-Agent System."""
 
 from agents.feed_parser import FeedParserAgent
 from agents.content_fetcher import ContentFetcherAgent
@@ -28,16 +8,8 @@ from agents.discord_poster import DiscordPosterAgent
 from agents.state import NewsAgentState
 
 
-# ============================================================================
-# Pipeline Functions
-# ============================================================================
-
 def create_pipeline() -> "StateGraph":
-    """Create the complete agent pipeline using LangGraph.
-
-    Returns:
-        Compiled StateGraph ready for invocation.
-    """
+    """Create the complete agent pipeline using LangGraph."""
     from langgraph.graph import StateGraph, START, END
 
     state = NewsAgentState()
@@ -68,15 +40,7 @@ def create_pipeline() -> "StateGraph":
 
 
 async def run_pipeline(feed_url: str, category: str = "General") -> dict:
-    """Run the complete pipeline for a single feed item.
-
-    Args:
-        feed_url: The RSS/Atom feed URL to process.
-        category: The category/tag for the feed item.
-
-    Returns:
-        The final state dictionary containing all processed data.
-    """
+    """Run the complete pipeline for a single feed item."""
     graph = create_pipeline()
 
     state = NewsAgentState()
@@ -89,7 +53,8 @@ async def run_pipeline(feed_url: str, category: str = "General") -> dict:
 
 
 async def main():
-    """Run the main pipeline demonstration."""
+    import json
+
     test_feed = "https://techcrunch.com/feed/"
 
     print("Running AI News Multi-Agent Pipeline...\n")
@@ -111,11 +76,3 @@ async def main():
         print(f"\nSummary:\n{result['summary'][:500]}...")
 
     print("\n" + "=" * 60)
-
-
-# ============================================================================
-# Main Entry Point
-# ============================================================================
-
-if __name__ == "__main__":
-    asyncio.run(main())
