@@ -1,0 +1,1 @@
+export { SpeakerBadge } from './SpeakerBadge'
