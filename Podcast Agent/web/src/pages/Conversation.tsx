@@ -24,23 +24,17 @@ export function Conversation() {
 
     const eventSource = new EventSource(`/api/v1/stream/${id}`)
 
-    eventSource.onmessage = (event) => {
+    eventSource.addEventListener('message', (event) => {
       const data = JSON.parse(event.data)
-      if (data.agent) {
-        setMessages((prev) => [...prev, data])
-      } else if (data.turn_count !== undefined) {
-        setStatus({
-          turnCount: data.turn_count,
-          maxTurns: 20,
-          isComplete: data.is_complete
-        })
-        // Only close when conversation is actually complete
-        if (data.is_complete) {
-          setIsConnected(false)
-          eventSource.close()
+      setMessages((prev) => {
+        if (!data || !data.agent) return prev
+        const last = prev[prev.length - 1]
+        if (last && last.agent === data.agent) {
+          return [...prev.slice(0, -1), { ...last, ...data }]
         }
-      }
-    }
+        return [...prev, data]
+      })
+    })
 
     eventSource.addEventListener('token', (event) => {
       const tokenData = JSON.parse(event.data)
@@ -72,11 +66,6 @@ export function Conversation() {
           }]
         }
       })
-    })
-
-    eventSource.addEventListener('message', (event) => {
-      const data = JSON.parse(event.data)
-      setMessages((prev) => [...prev, data])
     })
 
     eventSource.addEventListener('update', (event) => {
