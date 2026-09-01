@@ -1,6 +1,7 @@
 """Main entry point for the Research Agent."""
 
 import argparse
+import os
 from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
@@ -9,6 +10,7 @@ from rich.markdown import Markdown
 from config import DEFAULT_MODEL, DEFAULT_LLM_URL, nQueriesToGenerate, nLinksToSearchPerQuery
 from models import ResearchAgentState
 from llm import expand_query, research_topic, compress, summarize, should_compress
+from log import create_logger, ArticleLogger
 
 
 def main():
@@ -42,6 +44,10 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    # Initialize article logger
+    log_file = os.environ.get("ARTICLE_LOG_FILE", "reference.md")
+    article_logger = create_logger(log_file)
     
     # Determine the research topic from arguments or use default
     if args.topic:
@@ -79,9 +85,9 @@ def main():
     from langgraph.graph import StateGraph, START, END
     builder = StateGraph(ResearchAgentState)
     builder.add_node("expand", lambda state: expand_query(state, args.nQueries))
-    builder.add_node("research", research_topic)
-    builder.add_node("compress", compress)
-    builder.add_node("summarize", summarize)
+    builder.add_node("research", lambda state: research_topic(state, article_logger))
+    builder.add_node("compress", lambda state: compress(state, article_logger))
+    builder.add_node("summarize", lambda state: summarize(state, article_logger))
     builder.add_edge(START, "expand")
     builder.add_edge("expand", "research")
     builder.add_conditional_edges("research", should_compress, {
@@ -98,7 +104,8 @@ def main():
         {
             "topic": topic,
             "doPerQueryCompression": args.compress,
-            "nLinksToSearchPerQuery": args.nLinks
+            "nLinksToSearchPerQuery": args.nLinks,
+            "article_logger": article_logger
         }
     )
     

@@ -1,6 +1,7 @@
 from models import ResearchAgentState
 from utils import get_llm, get_llm_with_output
 from search import search_web
+from log import ArticleLogger
 
 def expand_query(state: ResearchAgentState, nQueries: int = 3) -> dict:
     """Expand the user topic into multiple search queries."""
@@ -57,8 +58,7 @@ def expand_query(state: ResearchAgentState, nQueries: int = 3) -> dict:
         "queries": result.queries
     }
 
-
-def research_topic(state: ResearchAgentState) -> dict:
+def research_topic(state: ResearchAgentState, article_logger: ArticleLogger = None) -> dict:
     """Research the topic using multiple search queries."""
     from rich.console import Console
     from rich.panel import Panel
@@ -73,13 +73,14 @@ def research_topic(state: ResearchAgentState) -> dict:
             return {
                 "nQueriesProcessed": state.nQueriesProcessed + 1
             }
-        else:        
+        else:
+        
             console.print(Panel.fit("[bold magenta]🔬 STAGE: Web Research[/bold magenta]", style="magenta"))
             console.print(Rule(style="magenta"))
             query = state.queries[state.nQueriesProcessed]
             console.print(f"\n[dim]Processing query {state.nQueriesProcessed + 1}/{len(state.queries)}:[/dim]")
             console.print(f"[dim]Query:[/dim] {query}")
-            search_result = search_web(query, state)
+            search_result = search_web(query, state, logger=article_logger)
             console.print(f"[dim]Articles found:[/dim] {search_result['nArticles']}")
             return {
                 "queryCacheForCompression": search_result["text"],
@@ -90,16 +91,17 @@ def research_topic(state: ResearchAgentState) -> dict:
     else:
         for i, query in enumerate(state.queries, 1):
             console.print(f"\n[dim]Query {i}/{len(state.queries)}:[/dim] {query}")
-            search_result = search_web(query, state)
+            search_result = search_web(query, state, logger=article_logger)
             scraped_data.append(search_result["text"] if search_result["text"] else "")
             nArticleCount += search_result["nArticles"]
     
     return {
         "scrapedData": scraped_data,
-        "nTotalArticlesProcessed": nArticleCount
+        "nTotalArticlesProcessed": nArticleCount,
+        "article_logger": article_logger
     }
     
-def compress(state: ResearchAgentState) -> dict:
+def compress(state: ResearchAgentState, article_logger: ArticleLogger = None) -> dict:
     from rich.console import Console
     from langchain_core.messages import SystemMessage, HumanMessage
     
@@ -134,6 +136,16 @@ def compress(state: ResearchAgentState) -> dict:
         llm = get_llm()
         querySummary = llm.invoke(context)
         
+        # Log the compressed summary if logger is available
+        if article_logger:
+            compressed_summary = querySummary.content[:500] if querySummary.content else ""
+            article_logger.add_entry(
+                query=state.queries[state.nQueriesProcessed - 1],
+                article_url="compressed_query_result",
+                similarity_score=1.0,
+                compressed_summary=compressed_summary
+            )
+        
         # Calculate compressed token count
         compressed_tokens = len(querySummary.content) // 4
         
@@ -148,8 +160,10 @@ def compress(state: ResearchAgentState) -> dict:
         console.print(f"[yellow]⚠️  Skipping article compression for empty results [/yellow]")
     
     return {
-        "scrapedData": state.scrapedData + [querySummary.content]
+        "scrapedData": state.scrapedData + [querySummary.content],
+        "article_logger": article_logger
     }
+
 
 def should_compress(state: ResearchAgentState) -> str:
     if state.doPerQueryCompression and state.nQueriesProcessed <= len(state.queries):
@@ -157,13 +171,14 @@ def should_compress(state: ResearchAgentState) -> str:
     else:
         return "summarize"
 
-def summarize(state: ResearchAgentState) -> dict:
+def summarize(state: ResearchAgentState, article_logger: ArticleLogger = None) -> dict:
     """Summarize the research findings."""
     from rich.console import Console
     from rich.panel import Panel
     from rich.rule import Rule
     from rich.markdown import Markdown
     from langchain_core.messages import SystemMessage, HumanMessage
+    import os
     
     console = Console()
     
@@ -171,6 +186,10 @@ def summarize(state: ResearchAgentState) -> dict:
     console.print(Rule(style="yellow"))
     console.print(f"\n[bold]Topic:[/bold] {state.topic}")
     console.print(f"[dim]Articles processed:[/dim] {state.nTotalArticlesProcessed}")
+    
+    # Use logger from state or create one
+    if article_logger is None:
+        article_logger = create_logger(os.environ.get("ARTICLE_LOG_FILE", "reference.md"))
     
     context = [
         SystemMessage(content=f"""You are an expert at synthesizing research from multiple articles into a cohesive summary.
@@ -200,6 +219,19 @@ def summarize(state: ResearchAgentState) -> dict:
     llm = get_llm()
     summary = llm.invoke(context)
     
+    # Log the summary statistics
+    if article_logger:
+        total_similarity = sum(e.similarity_score for e in article_logger.entries)
+        avg_similarity = total_similarity / len(article_logger.entries) if article_logger.entries else 0.0
+        article_logger.console.print(f"\n[dim]Summary statistics:[/dim]")
+        article_logger.console.print(f"   Articles logged: {len(article_logger.entries)}")
+        article_logger.console.print(f"   Average similarity score: {avg_similarity:.4f}")
+    
+    # Log the final summary to file
+    log_file = os.environ.get("ARTICLE_LOG_FILE", "reference.md")
+    article_logger.log_to_file(log_file)
+    
     return {
-        "summary": summary.content
+        "summary": summary.content,
+        "article_logger": article_logger
     }
