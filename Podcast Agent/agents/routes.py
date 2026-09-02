@@ -6,12 +6,13 @@ from typing import Dict, Any, AsyncGenerator
 from uuid import uuid4
 import json
 import os
+import re
 import asyncio
 from datetime import datetime
 
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from models import PodcastState
 from execution import execute_agent_turn
@@ -157,12 +158,22 @@ Your role:
 Your responses should be passionate and supportive, 
 helping to highlight the value and potential of the ideas being discussed."""
             
+            system_prompt += """
+
+IMPORTANT OUTPUT RULES:
+- Reply with ONLY your own spoken lines, in character as your podcast role.
+- Start directly with your words. NEVER prefix your reply with a label such as "host:", "guest:", "skeptic:", or "enthusiast:".
+- NEVER quote, copy, or repeat a previous speaker's message.
+- Keep your reply natural and conversational."""
+
             # Build messages for the LLM
             messages = [SystemMessage(content=system_prompt)]
-            
-            for msg in state.get("messages", [])[-5:]:
-                role = "user" if msg.get("agent") != next_speaker else "assistant"
-                messages.append(HumanMessage(content=f"{msg.get('agent', 'user')}: {msg.get('content', '')}"))
+
+            for msg in state.get("messages", [])[-6:]:
+                if msg.get("agent") == next_speaker:
+                    messages.append(AIMessage(content=msg.get("content", "")))
+                else:
+                    messages.append(HumanMessage(content=f"{msg.get('agent', 'user')}: {msg.get('content', '')}"))
             
             # Create LLM client for streaming
             llm = ChatOpenAI(
@@ -181,6 +192,19 @@ helping to highlight the value and potential of the ideas being discussed."""
                         full_response += chunk.content
                         # Send token event
                         yield f"event: token\ndata: {json.dumps({'agent': next_speaker, 'token': chunk.content})}\n\n"
+                
+                # Defensive cleanup: strip speaker labels/headers the model may have copied
+                cleaned = full_response.strip()
+                label_re = re.compile(r"^(?:%s)\s*(?::|response)[\s:-]*" % re.escape(next_speaker), re.IGNORECASE)
+                divider_re = re.compile(r"^\s*[-=#>*\s]{2,}\s*", re.DOTALL)
+                cleaned = divider_re.sub("", cleaned).strip()
+                while True:
+                    before = cleaned
+                    cleaned = label_re.sub("", cleaned).strip()
+                    cleaned = divider_re.sub("", cleaned).strip()
+                    if cleaned == before:
+                        break
+                full_response = cleaned
                 
                 # Add the complete response to messages
                 if "messages" not in state:

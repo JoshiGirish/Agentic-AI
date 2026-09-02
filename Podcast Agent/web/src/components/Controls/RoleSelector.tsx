@@ -1,5 +1,3 @@
-
-
 interface RoleSelectorProps {
   value: 'host_guest' | 'skeptic_enthusiast'
   onChange: (value: 'host_guest' | 'skeptic_enthusiast') => void
@@ -7,30 +5,32 @@ interface RoleSelectorProps {
 
 export function RoleSelector({ value, onChange }: RoleSelectorProps) {
   return (
-    <div className="space-y-2">
-      <label className="block text-white font-medium">Conversation Mode</label>
-      <div className="grid grid-cols-2 gap-3">
+    <div>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-1.5">
+        Conversation mode
+      </label>
+      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-[#0d0f12]">
         <button
           onClick={() => onChange('host_guest')}
-          className={`p-4 rounded-xl border-2 transition-all ${
-            value === 'host_guest'
-              ? 'border-purple-500 bg-purple-500/20 text-white'
-              : 'border-white/10 bg-white/5 text-white/60 hover:border-white/30'
+          className={`rounded-md px-3 py-2.5 text-left transition-colors ${
+            value === 'host_guest' ? 'bg-[#e94560] text-white' : 'text-[#9ca3af] hover:bg-[#1a1d24]'
           }`}
         >
-          <div className="font-semibold">Host & Guest</div>
-          <div className="text-xs text-white/50 mt-1">Guided discussion with expert insights</div>
+          <div className="text-[14px] font-medium">Host & Guest</div>
+          <div className={`text-[11px] ${value === 'host_guest' ? 'text-white/80' : 'text-[#6b7280]'}`}>
+            Guided discussion
+          </div>
         </button>
         <button
           onClick={() => onChange('skeptic_enthusiast')}
-          className={`p-4 rounded-xl border-2 transition-all ${
-            value === 'skeptic_enthusiast'
-              ? 'border-green-500 bg-green-500/20 text-white'
-              : 'border-white/10 bg-white/5 text-white/60 hover:border-white/30'
+          className={`rounded-md px-3 py-2.5 text-left transition-colors ${
+            value === 'skeptic_enthusiast' ? 'bg-[#e94560] text-white' : 'text-[#9ca3af] hover:bg-[#1a1d24]'
           }`}
         >
-          <div className="font-semibold">Skeptic & Enthusiast</div>
-          <div className="text-xs text-white/50 mt-1">Debate with critical & positive views</div>
+          <div className="text-[14px] font-medium">Debate</div>
+          <div className={`text-[11px] ${value === 'skeptic_enthusiast' ? 'text-white/80' : 'text-[#6b7280]'}`}>
+            Skeptic & Enthusiast
+          </div>
         </button>
       </div>
     </div>

@@ -1,3 +1,99 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* Minimal palette */
+    --bg-primary: #0f1115;
+    --bg-secondary: #16191f;
+    --bg-tertiary: #1a1d24;
+    --bg-input: #0d0f12;
+    --bg-hover: #23272f;
+    --bg-active: #e94560;
+    --border-color: #2a2e38;
+    --text-primary: #e8ecef;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --primary: #e94560;
+    --primary-hover: #c42c44;
+    --accent: #6366f1;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: 0.01em;
+  }
+
+  /* Minimal scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+
+  /* Input focus rings */
+  input:focus, button:focus, textarea:focus {
+    outline: none;
+  }
+  input:focus, textarea:focus {
+    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 3px var(--accent);
+  }
+}
+
+@layer components {
+  /* Smooth entrance for incoming messages */
+  .msg-enter {
+    animation: msgEnter 0.28s ease-out;
+  }
+
+  /* Streaming / typing caret on the active message */
+  .streaming-caret::after {
+    content: '\258D';
+    display: inline-block;
+    color: #f0b232;
+    margin-left: 2px;
+    animation: blink 1s steps(1) infinite;
+  }
+}
+
+@keyframes msgEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

@@ -1,34 +1,46 @@
+name: podcast-agent
+
 services:
+  agents:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: podcast-agent-agents
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_URL=${LLM_URL:-http://localhost:8080/v1}
+    volumes:
+      - agent-state:/root/.agentic-ai/state
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
+    container_name: podcast-agent-web
     ports:
       - "3000:80"
-    environment:
-      - AGENTS_URL=http://agents:8000
-      - LLM_URL=http://localhost:8080/v1
     depends_on:
-      - agents
-    networks:
-      - podcast-network
+      agents:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  agents:
-    build:
-      context: ./agents
-      dockerfile: Dockerfile
-    environment:
-      - LLM_URL=http://localhost:8080/v1
-    networks:
-      - podcast-network
-
-  redis:
-    image: valkey/valkey:8-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - podcast-network
+volumes:
+  agent-state:
 
 networks:
-  podcast-network:
-    driver: bridge
+  default:
+    name: podcast-agent-network

@@ -1,5 +1,7 @@
 """Agent orchestrator for LangGraph-based podcast conversations."""
 
+import re
+
 from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
@@ -104,7 +106,7 @@ class PodcastAgentOrchestrator:
         """Generate an agent response using LLM."""
         from langchain_openai import ChatOpenAI
         from pydantic import SecretStr
-        from langchain_core.messages import SystemMessage, HumanMessage
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
         
         llm = ChatOpenAI(
             model="gemma-4-E4b-it.Q4_K_M.gguf",
@@ -114,16 +116,35 @@ class PodcastAgentOrchestrator:
             streaming=True
         )
         
-        messages = [SystemMessage(content=system_prompt)]
-        
-        for msg in state.messages[-5:]:
-            role = "user" if msg["agent"] != agent_role else "assistant"
-            messages.append(HumanMessage(content=f"{msg['agent']}: {msg['content']}"))
-        
+        messages = [SystemMessage(content=system_prompt + """
+
+IMPORTANT OUTPUT RULES:
+- Reply with ONLY your own spoken lines, in character as your podcast role.
+- Start directly with your words. NEVER prefix your reply with a label such as "host:", "guest:", "skeptic:", or "enthusiast:".
+- NEVER quote, copy, or repeat a previous speaker's message.
+- Keep your reply natural and conversational.""")]
+
+        for msg in state.messages[-6:]:
+            if msg["agent"] == agent_role:
+                messages.append(AIMessage(content=msg["content"]))
+            else:
+                messages.append(HumanMessage(content=f"{msg['agent']}: {msg['content']}"))
+
         response = await llm.ainvoke(messages)
-        
+
+        content = str(response.content).strip()
+        label_re = re.compile(r"^(?:%s)\s*(?::|response)[\s:-]*" % re.escape(agent_role), re.IGNORECASE)
+        divider_re = re.compile(r"^\s*[-=#>*\s]{2,}\s*", re.DOTALL)
+        content = divider_re.sub("", content).strip()
+        while True:
+            before = content
+            content = label_re.sub("", content).strip()
+            content = divider_re.sub("", content).strip()
+            if content == before:
+                break
+
         return {
-            "messages": state.messages + [{"agent": agent_role, "content": response.content}],
+            "messages": state.messages + [{"agent": agent_role, "content": content}],
             "turn_count": state.turn_count + 1
         }
     

@@ -1,8 +1,10 @@
 """Agent implementations for the Podcast Conversation Platform."""
 
+import re
+
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from models import PodcastState
 
@@ -36,15 +38,36 @@ class PodcastAgent:
             self.initialize()
         
         system_prompt = self._get_system_prompt(topic)
-        
+
+        system_prompt += """
+
+IMPORTANT OUTPUT RULES:
+- Reply with ONLY your own spoken lines, in character as your podcast role.
+- Start directly with your words. NEVER prefix your reply with a label such as "host:", "guest:", "skeptic:", or "enthusiast:".
+- NEVER quote, copy, or repeat a previous speaker's message.
+- Keep your reply natural and conversational."""
+
         messages = [SystemMessage(content=system_prompt)]
-        
-        for msg in conversation_history[-5:]:
-            role = "user" if msg.get("agent") != self.role else "assistant"
-            messages.append(HumanMessage(content=f"{msg.get('agent', 'user')}: {msg.get('content', '')}"))
-        
+
+        for msg in conversation_history[-6:]:
+            if msg.get("agent") == self.role:
+                messages.append(AIMessage(content=msg.get("content", "")))
+            else:
+                messages.append(HumanMessage(content=f"{msg.get('agent', 'user')}: {msg.get('content', '')}"))
+
         response = await self.llm.ainvoke(messages)
-        return response.content
+
+        content = str(response.content).strip()
+        label_re = re.compile(r"^(?:%s)\s*(?::|response)[\s:-]*" % re.escape(self.role), re.IGNORECASE)
+        divider_re = re.compile(r"^\s*[-=#>*\s]{2,}\s*", re.DOTALL)
+        content = divider_re.sub("", content).strip()
+        while True:
+            before = content
+            content = label_re.sub("", content).strip()
+            content = divider_re.sub("", content).strip()
+            if content == before:
+                break
+        return content
     
     def _get_system_prompt(self, topic: str) -> str:
         """Get the system prompt for this agent."""
