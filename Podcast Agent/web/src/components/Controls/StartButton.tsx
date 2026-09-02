@@ -1,5 +1,3 @@
-
-
 interface StartButtonProps {
   onClick: () => void
   disabled?: boolean
@@ -10,13 +8,13 @@ export function StartButton({ onClick, disabled }: StartButtonProps) {
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
+      className={`w-full py-3 rounded-xl font-semibold text-[15px] transition-all duration-200 ${
         disabled
-          ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
-          : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/25'
+          ? 'bg-elevated text-muted cursor-not-allowed'
+          : 'bg-accent text-white hover:bg-accent-hover shadow-lg shadow-accent/25 active:scale-[0.99]'
       }`}
     >
-      Start Conversation
+      Launch Session
     </button>
   )
 }

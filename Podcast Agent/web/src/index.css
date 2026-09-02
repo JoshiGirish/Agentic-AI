@@ -3,48 +3,46 @@
 @tailwind utilities;
 
 @layer base {
+  /* Local mirror of the matching tailwind.config.js tokens.
+   Only the variables consumed by these global (non-utility) styles live here;
+   the full palette lives in tailwind.config.js. Keep values in sync. */
   :root {
-    /* Minimal palette */
-    --bg-primary: #0f1115;
-    --bg-secondary: #16191f;
-    --bg-tertiary: #1a1d24;
-    --bg-input: #0d0f12;
-    --bg-hover: #23272f;
-    --bg-active: #e94560;
-    --border-color: #2a2e38;
-    --text-primary: #e8ecef;
-    --text-secondary: #9ca3af;
-    --text-muted: #6b7280;
-    --primary: #e94560;
-    --primary-hover: #c42c44;
-    --accent: #6366f1;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --error: #ef4444;
+    --bg-app: #0f1218;
+    --bg-input: #0c0f15;
+    --border-color: #242c3c;
+    --text-primary: #eef2f7;
+    --text-muted: #6d7887;
+    --primary: #e0455f;
+    --warning: #f2b93f;
   }
 
   html {
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-size: 16px;
     line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     margin: 0;
-    background: var(--bg-primary);
+    background: var(--bg-app);
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: 0.01em;
+    text-rendering: optimizeLegibility;
   }
 
-  /* Minimal scrollbar */
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
   }
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -57,12 +55,22 @@
     background: var(--text-muted);
   }
 
-  /* Input focus rings */
-  input:focus, button:focus, textarea:focus {
+  /* A11y-friendly focus rings (over the page instead of relying on borders) */
+  input:focus,
+  button:focus,
+  textarea:focus {
     outline: none;
   }
-  input:focus, textarea:focus {
-    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 3px var(--accent);
+  input:focus-visible,
+  textarea:focus-visible {
+    box-shadow: 0 0 0 2px var(--bg-input), 0 0 0 3px var(--primary);
+  }
+  button:focus-visible {
+    box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 3px var(--primary);
+  }
+
+  input[type='range'] {
+    accent-color: var(--primary);
   }
 }
 
@@ -76,7 +84,7 @@
   .streaming-caret::after {
     content: '\258D';
     display: inline-block;
-    color: #f0b232;
+    color: var(--warning);
     margin-left: 2px;
     animation: blink 1s steps(1) infinite;
   }

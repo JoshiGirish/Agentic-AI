@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ServerRail } from '../components/Layout/ServerRail'
-import { RoleSelector } from '../components/Controls'
+import { RoleSelector, StartButton } from '../components/Controls'
+import { agentProfile } from '../lib/agentConfig'
 
 const FEATURED_ROLES = ['host', 'guest', 'skeptic', 'enthusiast']
 
@@ -35,24 +36,27 @@ export function Home() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#0f1115]">
+    <div className="min-h-screen flex bg-app">
       <ServerRail />
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-[420px]">
-          <div className="rounded-2xl bg-[#16191f] border border-[#2a2e38] shadow-2xl overflow-hidden">
-            <div className="px-6 pt-6 pb-3 text-center">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-[#e94560]/10 flex items-center justify-center text-4xl mb-3">
+        <div className="w-full max-w-[440px]">
+          <div className="relative rounded-2xl bg-panel border border-line shadow-2xl shadow-black/40 overflow-hidden">
+            {/* Soft accent wash behind the card header */}
+            <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-accent/15 to-transparent pointer-events-none" />
+
+            <div className="relative px-8 pt-9 pb-2 text-center">
+              <div className="relative mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/25 to-accent/5 flex items-center justify-center text-4xl ring-1 ring-accent/30 shadow-lg shadow-accent/10">
                 🎙️
               </div>
-              <h1 className="text-xl font-semibold text-[#e8ecef]">AI Agent Podcast</h1>
-              <p className="text-[#9ca3af] text-sm mt-1.5 leading-relaxed max-w-[320px] mx-auto">
+              <h1 className="mt-4 text-[22px] font-bold tracking-tight text-ink">AI Agent Podcast</h1>
+              <p className="text-sub text-sm mt-2 leading-relaxed max-w-[340px] mx-auto">
                 Two AI agents with distinct personalities chat live in a podcast-style conversation.
               </p>
             </div>
 
-            <div className="px-6 py-5 space-y-4">
+            <div className="relative px-8 py-5 space-y-5">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
                   Topic
                 </label>
                 <input
@@ -60,7 +64,7 @@ export function Home() {
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="e.g. The future of quantum computing"
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#0d0f12] border border-[#2a2e38] text-[#e8ecef] placeholder:text-[#6b7280] text-[15px] focus:outline-none focus:border-[#e94560] focus:shadow-[0_0_0_1px_rgba(233,69,96,0.15)] transition-colors"
+                  className="w-full px-4 py-2.5 rounded-xl bg-field border border-line text-ink placeholder:text-muted text-[15px] transition-colors"
                   onKeyDown={(e) => e.key === 'Enter' && handleStart()}
                 />
               </div>
@@ -68,18 +72,20 @@ export function Home() {
               <RoleSelector value={roleMode} onChange={setRoleMode} />
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">
                   On air
                 </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {FEATURED_ROLES.map((a) => {
+                <div className="flex flex-wrap gap-2">
+                  {FEATURED_ROLES.map((role) => {
+                    const profile = agentProfile(role)
                     return (
                       <span
-                        key={a}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-colors"
+                        key={role}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-elevated border border-line"
+                        style={{ color: profile.usernameColor }}
                       >
-                        <span className="w-3 h-3 rounded-full bg-[#e94560]" />
-                        <span className="text-[#9ca3af]">{a}</span>
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: profile.usernameColor }} />
+                        {profile.label}
                       </span>
                     )
                   })}
@@ -87,11 +93,11 @@ export function Home() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">
                     Max turns
                   </label>
-                  <span className="text-sm font-medium text-[#e94560]">{maxTurns}</span>
+                  <span className="text-sm font-semibold tabular-nums text-accent">{maxTurns}</span>
                 </div>
                 <input
                   type="range"
@@ -99,21 +105,15 @@ export function Home() {
                   max="50"
                   value={maxTurns}
                   onChange={(e) => setMaxTurns(Number(e.target.value))}
-                  className="w-full accent-[#e94560] cursor-pointer"
+                  className="w-full cursor-pointer"
                 />
               </div>
             </div>
 
-            <div className="px-6 pb-5">
-              <button
-                onClick={handleStart}
-                disabled={!topic.trim()}
-                className="w-full py-2.5 rounded-xl bg-[#e94560] hover:bg-[#c42c44] active:bg-[#c42c44] disabled:bg-[#e94560]/50 disabled:cursor-not-allowed text-[#e8ecef] font-semibold text-[15px] transition-colors shadow-lg shadow-[#e94560]/10"
-              >
-                Launch Session
-              </button>
-              <p className="text-center text-[10px] text-[#6b7280] mt-2.5">
-                Powered by LangGraph & FastAPI
+            <div className="relative px-8 pb-7">
+              <StartButton onClick={handleStart} disabled={!topic.trim()} />
+              <p className="text-center text-[11px] text-muted mt-3">
+                Powered by LangGraph &amp; FastAPI
               </p>
             </div>
           </div>
