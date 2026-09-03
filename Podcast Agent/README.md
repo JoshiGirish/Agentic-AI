@@ -115,27 +115,33 @@ curl -X DELETE http://localhost:8000/api/v1/conversation/{conversation_id}
 ## Project Structure
 
 ```
-Agentic-AI/
-├── web/                      # FastAPI + React frontend
-│   ├── app/                  # FastAPI backend
-│   │   ├── main.py          # FastAPI app entry point
-│   │   ├── routes/          # API routes
-│   │   └── services/        # Business logic
-│   ├── src/                 # React frontend
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── App.tsx
-│   ├── Dockerfile
-│   └── package.json
-├── agents/                  # LangGraph agents
-│   ├── main.py             # Agent service entry point
-│   ├── orchestrator.py     # Conversation orchestrator
-│   ├── agents.py           # Agent implementations
-│   ├── Dockerfile
-│   └── requirements.txt
-├── docker-compose.yml
-└── README.md
-```
+Podcast Agent/            # Podcast creation and management agent
+   ├── Dockerfile           # Docker configuration for the agent
+   ├── README.md            # Agent-specific documentation
+   ├── PROJECT_STRUCTURE.md # Detailed internal structure
+   ├── requirements.txt     # Python dependencies
+   ├── agents/              # Agent implementation module
+   │   ├── _agents.py       # Agent definitions and configurations
+   │   ├── execution.py     # Agent execution logic
+   │   ├── main.py          # Entry point for agents
+   │   ├── models.py        # Agent models and data structures
+   │   ├── orchestrator.py  # Agent orchestration logic
+   │   ├── routes.py        # API routes for agent services
+   │   ├── services.py      # Agent services and utilities
+   │   └── [other files]    # Additional agent utilities
+   ├── docker-compose.yml   # Docker Compose configuration
+   └── web/                 # Web interface for the agent
+       ├── app/            # Application layer
+       │   ├── main.py     # Application entry point
+       │   ├── routes/     # HTTP routes
+       │   ├── schemas/    # Data schemas
+       │   └── services/   # Business logic services
+       ├── src/            # React/TypeScript frontend
+       │   ├── components/ # UI components
+       │   ├── pages/      # Page components
+       │   └── lib/        # Utilities and config
+       └── [build files]   # Compiled assets
+
 
 ## Configuration
 
